@@ -1,0 +1,4767 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gabax - Упрощенная архитектура</title>
+  <style>
+    /* === Базовые стили === */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background-color: #36393f;
+      color: white;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* === Основной контейнер === */
+    .app {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* === Панель серверов === */
+    .servers {
+      width: 72px;
+      background-color: #202225;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 0;
+    }
+    .server {
+      width: 50px;
+      height: 50px;
+      background-color: #5865f2;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 5px 0;
+      font-size: 24px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .top-icon {
+      margin-bottom: 10px;
+    }
+    .divider {
+      width: 100%;
+      height: 1px;
+      background-color: #4f545c;
+      margin: 10px 0;
+      border: none;
+    }
+    #serverList {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-grow: 1;
+      overflow-y: auto;
+    }
+	#serverList::-webkit-scrollbar {
+		display: none;
+	}	
+    .add-server {
+      margin-top: 10px;
+      font-size: 30px;
+      font-weight: 700;
+      line-height: 1;
+      user-select: none;
+    }
+
+    /* === Каналы === */
+    .channels {
+      width: 280px;
+      background-color: #2f3136;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .channels-lists {
+      flex-grow: 1;
+      overflow-y: auto;
+      padding-right: 5px;
+    }
+
+    .channels-lists h3 {
+      margin-bottom: 10px;
+      font-size: 16px;
+      color: white;
+    }
+
+    .channels ul {
+      list-style: none;
+      flex-grow: 1;
+      overflow-y: auto;
+      padding-right: 5px;
+    }
+    #textChannelsList,
+    #avChannelsList {
+      max-height: none;
+      overflow-y: auto;
+      padding-right: 5px;
+      margin-bottom: 10px;
+    }
+
+    .channels li {
+      padding: 8px;
+      color: #b9bbbe;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-radius: 4px;
+      position: relative;
+    }
+    .channels li:hover {
+      background-color: #393c43;
+    }
+    .channel-info {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-grow: 1;
+    }
+    .toggle-participants {
+      background: none;
+      border: none;
+      color: #b9bbbe;
+      font-size: 14px;
+      cursor: pointer;
+      user-select: none;
+      padding: 0 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.3s ease;
+    }
+    .toggle-participants.open {
+      transform: rotate(180deg);
+    }
+    .participants-list {
+      position: relative;
+      background-color: #2f3136;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 13px;
+      margin-top: 5px;
+      display: none;
+    }
+
+    .participants-list.show {
+      display: block;
+    }
+
+    .participants-list li {
+      padding: 3px 0;
+      color: #b9bbbe;
+      cursor: default;
+    }
+
+    /* Стили для участников каналов */
+    .participant-item {
+      padding: 6px 8px !important;
+      margin: 2px 0;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .participant-item:hover {
+      background-color: #393c43 !important;
+      color: white;
+    }
+
+    .context-menu, .quick-actions-menu {
+      animation: fadeIn 0.1s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    #addChannelBtn {
+      background-color: #5865f2;
+      color: white;
+      border: none;
+      padding: 8px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-top: 10px;
+      user-select: none;
+      transition: all 0.3s ease;
+    }
+    #addChannelBtn:hover {
+      background-color: #4752c4;
+    }
+
+    /* === Чат === */
+    .chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background-color: #36393f;
+    }
+    .chat-header {
+      padding: 20px;
+      background-color: #2f3136;
+      border-bottom: 1px solid #232428;
+    }
+    .chat-messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .message {
+      margin-bottom: 10px;
+    }
+    .chat-input {
+      padding: 20px;
+      border-top: 1px solid #232428;
+      background-color: #40444b;
+    }
+    .chat-input input {
+      width: 100%;
+      padding: 10px;
+      background-color: #2f3136;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      font-size: 14px;
+    }
+    .chat-input input::placeholder {
+      color: #b9bbbe;
+    }
+
+    /* === Панель управления медиа === */
+    .media-controls-sidebar {
+      background-color: #2f3136;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 10px;
+    }
+    .media-controls-sidebar h3 {
+      margin-bottom: 10px;
+      font-size: 16px;
+      text-align: center;
+    }
+    .video-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+    .video-btn {
+      padding: 10px;
+      background-color: #40444b;
+      border: none;
+      border-radius: 4px;
+      color: #b9bbbe;
+      cursor: pointer;
+      text-align: center;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .video-btn:hover {
+      background-color: #5865f2;
+      color: white;
+    }
+    .video-btn.active {
+      background-color: #5865f2;
+      color: white;
+    }
+    .video-btn.disabled {
+      background-color: #ed4245;
+      color: white;
+    }
+    .media-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .media-action {
+      padding: 10px;
+      background-color: #5865f2;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+      text-align: center;
+      transition: background-color 0.3s ease;
+    }
+    .media-action:hover {
+      background-color: #4752c4;
+    }
+    .media-action.stop {
+      background-color: #ed4245;
+    }
+    .media-action.stop:hover {
+      background-color: #c03537;
+    }
+
+    /* === Управление аудио === */
+    .audio-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #40444b;
+    }
+
+    .audio-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 10px;
+      background-color: #40444b;
+      border: none;
+      border-radius: 4px;
+      color: #b9bbbe;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.3s ease;
+      font-size: 14px;
+      width: 100%;
+    }
+
+    .audio-btn:hover {
+      background-color: #5865f2;
+      color: white;
+    }
+
+    .audio-btn.muted {
+      background-color: #ed4245;
+      color: white;
+    }
+
+    .audio-btn .icon {
+      font-size: 16px;
+      width: 20px;
+      text-align: center;
+    }
+
+    .audio-btn .text {
+      flex: 1;
+      text-align: center;
+    }
+
+    .audio-btn.muted .text::after {
+      content: " (выкл)";
+      font-size: 12px;
+      opacity: 0.8;
+    }
+
+    /* === Контейнеры для видео === */
+    .video-container {
+      border: 2px solid #5865f2;
+      margin: 10px;
+      padding: 10px;
+      background-color: #2f3136;
+      border-radius: 8px;
+      max-width: 600px;
+    }
+
+    .video-label {
+      margin-bottom: 8px;
+      font-weight: bold;
+      color: #5865f2;
+    }
+
+    .video-element {
+      width: 100%;
+      border-radius: 4px;
+      background-color: #000;
+    }
+
+    /* === WebRTC элементы === */
+    #webrtcElements {
+      background-color: #2f3136;
+      padding: 15px;
+      margin: 10px;
+      border-radius: 8px;
+      border: 1px solid #40444b;
+    }
+
+    #webrtcElements button {
+      margin: 5px;
+      padding: 8px 12px;
+      background-color: #5865f2;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #webrtcElements button:hover {
+      background-color: #4752c4;
+    }
+
+    /* === Модальные окна === */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0,0,0,0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background-color: #2f3136;
+      padding: 30px 40px;
+      border-radius: 8px;
+      width: 320px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+      text-align: center;
+    }
+    .modal-content h2 {
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+    .modal-content label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 14px;
+      color: #b9bbbe;
+      text-align: left;
+    }
+    .modal-content input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 4px;
+      border: none;
+      background-color: #202225;
+      color: white;
+      font-size: 14px;
+    }
+    .modal-content input::placeholder {
+      color: #72767d;
+    }
+    .modal-content button {
+      width: 100%;
+      padding: 10px;
+      background-color: #5865f2;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      margin-bottom: 10px;
+      transition: background-color 0.3s ease;
+    }
+    .modal-content button:hover {
+      background-color: #4752c4;
+    }
+    .link-button {
+      background: none;
+      border: none;
+      color: #5865f2;
+      cursor: pointer;
+      font-size: 14px;
+      text-decoration: underline;
+      margin-top: 10px;
+    }
+
+    .channel-type-toggle {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .channel-type-toggle input[type="radio"] {
+      display: none;
+    }
+    .channel-type-toggle label {
+      flex: 1;
+      padding: 10px 0;
+      background-color: #40444b;
+      color: #b9bbbe;
+      text-align: center;
+      border-radius: 4px;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .channel-type-toggle input[type="radio"]:checked + label {
+      background-color: #5865f2;
+      color: white;
+      font-weight: 600;
+    }
+
+    /* Индикатор состояния */
+    .streaming-status {
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin: 10px 0;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .streaming-status.active {
+      background-color: #5865f2;
+      color: white;
+    }
+
+    .streaming-status.inactive {
+      background-color: #72767d;
+      color: #b9bbbe;
+    }
+
+    .video-preview {
+      width: 100%;
+      max-width: 300px;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+	/* Стили для иконок пользователей */
+	.user-icon {
+		font-size: 12px;
+		margin-left: 8px;
+		opacity: 0.7;
+		transition: opacity 0.2s ease;
+	}
+
+	.participant-item:hover .user-icon {
+		opacity: 1;
+	}
+
+	/* Разные типы иконок для разных статусов */
+	.user-icon.muted {
+		color: #ed4245;
+	}
+
+	.user-icon.deafened {
+		color: #72767d;
+	}
+
+	.user-icon.streaming {
+		color: #5865f2;
+	}	
+	/* Модальное окно для потоков */
+	.stream-modal {
+	  max-width: 800px;
+	  width: 90vw;
+	  padding: 0px;
+	}
+
+	.stream-container {
+	  width: 100%;
+	  margin: 0px 0;
+	  border-radius: 8px;
+	  overflow: hidden;
+	  background-color: #000;
+	  min-height: 300px;
+	  display: flex;
+	  align-items: center;
+	  justify-content: center;
+	}
+
+	.stream-container video {
+	  width: 100%;
+	  max-height: 70vh;
+	  object-fit: contain;
+	}
+
+	.stream-container audio {
+	  width: 100%;
+	  padding: 20px;
+	  background: #2f3136;
+	}
+
+	.stream-info {
+	  padding: 10px;
+	  background: #2f3136;
+	  border-radius: 6px;
+	  margin-top: 10px;
+	  font-size: 14px;
+	  color: #b9bbbe;
+	}
+
+	.no-stream {
+	  color: #72767d;
+	  font-style: italic;
+	  padding: 40px;
+	  text-align: center;
+	}
+	.stream-modal {
+	  position: fixed;
+	  top: 50px;
+	  left: 50px;
+	  margin: 0;
+	  z-index: 10000;
+	  resize: both; /* Пользователь может менять размер */
+	  overflow: auto;
+	  
+	  /* Просто даем пользователю возможность перемещать окно браузера */
+	  /* Или менять его размер через resize handle */
+	}
+	.stream-modal {
+		position: fixed;
+		top: 100px;
+		left: 100px;
+		margin: 0;
+		cursor: move;
+		user-select: none;
+		z-index: 10000;
+		min-width: 400px;
+		max-width: 90vw;
+		resize: both;
+		overflow: auto;
+		min-height: 300px;
+		max-height: 90vh;
+		border: 2px solid #5865f2;
+	}
+
+	.stream-modal h3 {
+		cursor: move;
+		user-select: none;
+		margin-bottom: 15px;
+	}
+
+	.stream-modal.dragging {
+		cursor: grabbing;
+		opacity: 0.9;
+	}
+	
+	/* Стили для плеера стримов */
+	.stream-player-container {
+		position: relative;
+		background: #000;
+		border-radius: 8px;
+		overflow: hidden;
+	}
+
+	.stream-player-controls {
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		background: linear-gradient(transparent, rgba(0,0,0,0.7));
+		padding: 20px 15px 10px;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		opacity: 0;
+		transition: opacity 0.3s ease;
+		z-index: 10;
+	}
+
+	.stream-player-container:hover .stream-player-controls {
+		opacity: 1;
+	}
+
+	.stream-player-controls button {
+		background: none;
+		border: none;
+		color: white;
+		font-size: 16px;
+		cursor: pointer;
+		padding: 8px;
+		border-radius: 4px;
+		transition: background 0.2s;
+	}
+
+	.stream-player-controls button:hover {
+		background: rgba(255,255,255,0.2);
+	}
+
+	.multi-stream-wrapper {
+		position: relative;
+		background: #000;
+		border-radius: 8px;
+		overflow: hidden;
+		transition: transform 0.2s;
+	}
+
+	.multi-stream-wrapper:hover {
+		transform: scale(1.02);
+	}
+
+	.no-stream {
+		color: #72767d;
+		font-style: italic;
+		padding: 40px;
+		text-align: center;
+		font-size: 16px;
+	}
+
+	/* Адаптивность */
+	@media (max-width: 768px) {
+		.stream-modal {
+			min-width: 95vw;
+			left: 2.5vw !important;
+			top: 2.5vh !important;
+		}
+		
+		.stream-player-controls {
+			padding: 15px 10px 8px;
+			gap: 8px;
+		}
+		
+		.stream-player-controls button {
+			padding: 6px;
+			font-size: 14px;
+		}
+	}
+	.stream-modal {
+		position: fixed;
+		top: 100px;
+		left: 100px;
+		margin: 0;
+		cursor: move;
+		user-select: none;
+		z-index: 10000;
+		min-width: 400px;
+		max-width: 90vw;
+		resize: both;
+		overflow: auto;
+		min-height: 300px;
+		max-height: 90vh;
+		border: 2px solid #5865f2;
+		background: #2f3136;
+		border-radius: 8px;
+		box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+	}
+
+	.stream-modal h3 {
+		cursor: move;
+		user-select: none;
+		margin-bottom: 15px;
+		padding: 15px;
+		background: #36393f;
+		border-bottom: 1px solid #40444b;
+		margin: 0;
+		border-radius: 8px 8px 0 0;
+	}
+
+	.stream-modal.dragging {
+		cursor: grabbing;
+		opacity: 0.9;
+	}
+
+	/* Улучшаем визуальную обратную связь */
+	.stream-modal h3:hover {
+		background: #40444b;
+	}
+
+	/* Делаем всю верхнюю часть перетаскиваемой */
+	.stream-modal::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 50px; /* Высота области перетаскивания */
+		cursor: move;
+		z-index: 1;
+	}
+	.stream-modal {
+		position: fixed;
+		top: 100px;
+		left: 100px;
+		margin: 0;
+		cursor: move;
+		user-select: none;
+		z-index: 10000;
+		background: #2f3136;
+		border-radius: 8px;
+		border: 2px solid #5865f2;
+		box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+		overflow: hidden;
+		resize: none; /* Отключаем стандартный resize */
+	}
+
+	/* Стили для resize handles */
+	.resize-handle {
+		position: absolute;
+		background: transparent;
+		z-index: 10;
+	}
+
+	.resize-n { top: 0; left: 0; right: 0; height: 4px; cursor: n-resize; }
+	.resize-e { top: 0; right: 0; bottom: 0; width: 4px; cursor: e-resize; }
+	.resize-s { bottom: 0; left: 0; right: 0; height: 4px; cursor: s-resize; }
+	.resize-w { top: 0; left: 0; bottom: 0; width: 4px; cursor: w-resize; }
+
+	.resize-ne { top: 0; right: 0; width: 8px; height: 8px; cursor: ne-resize; }
+	.resize-nw { top: 0; left: 0; width: 8px; height: 8px; cursor: nw-resize; }
+	.resize-se { bottom: 0; right: 0; width: 8px; height: 8px; cursor: se-resize; }
+	.resize-sw { bottom: 0; left: 0; width: 8px; height: 8px; cursor: sw-resize; }
+
+	/* Подсветка handles при наведении */
+	.resize-handle:hover {
+		background: rgba(88, 101, 242, 0.3);
+	}
+
+	.stream-modal h3 {
+		cursor: move;
+		user-select: none;
+		margin-bottom: 15px;
+		padding: 15px;
+		background: #36393f;
+		border-bottom: 1px solid #40444b;
+		margin: 0;
+		border-radius: 8px 8px 0 0;
+	}
+
+	.stream-container {
+		padding: 15px;
+		height: calc(100% - 00px);
+		overflow: auto;
+	}
+
+	.no-stream {
+		color: #72767d;
+		font-style: italic;
+		padding: 40px;
+		text-align: center;
+	}
+
+	.stream-controls {
+		padding: 0px;
+		border-top: 1px solid #40444b;
+		display: flex;
+		justify-content: center;
+	}
+	
+
+	</style>
+</head>
+
+
+
+<body>
+
+  <!-- Основное приложение -->
+  <div class="app" id="app">
+    <aside class="servers" id="serversPanel">
+      <div class="server top-icon" title="Личные сообщения">📩</div>
+      <hr class="divider" />
+      <div id="serverList"></div>
+      <div class="server add-server" id="addServerBtn" title="Добавить сервер">+</div>
+    </aside>
+
+    <aside class="channels">
+      <div class="channels-lists">
+        <h3>Текстовые каналы</h3>
+        <ul id="textChannelsList">
+          <!-- Текстовые каналы будут тут -->
+        </ul>
+
+        <h3>Аудио/Видео каналы</h3>
+        <ul id="avChannelsList">
+          <!-- Аудио/видео каналы будут тут -->
+        </ul>
+      </div>
+
+      <!-- Кнопка добавления канала -->
+      <button id="addChannelBtn">➕ Добавить канал</button>
+      
+      <!-- Панель управления медиа в боковой панели -->
+      <div class="media-controls-sidebar" id="mediaControlsSidebar" style="display: none;">
+        <!-- <h3>Управление медиа</h3> -->
+        
+        <!-- Предпросмотр локального видео -->
+        <video id="localVideoPreview" class="video-preview" muted autoplay></video>
+        
+        <!-- Управление видео -->
+        <div class="video-controls">
+          <button class="video-btn" id="enableCameraBtn">
+            📹 Включить камеру
+          </button>
+          <button class="video-btn" id="enableScreenBtn">
+            🖥️ Демонстрация экрана
+          </button>
+          <button class="video-btn disabled" id="disableVideoBtn">
+            ❌ Выключить видео
+          </button>
+        </div>
+
+        <!-- Кнопки управления звуком -->
+        <div class="audio-controls">
+          <button class="audio-btn mute-mic" id="muteMicBtn">
+            <span class="icon">🎤</span>
+            <span class="text">Выкл. микрофон</span>
+          </button>
+          <button class="audio-btn mute-sound" id="muteSoundBtn">
+            <span class="icon">🔊</span>
+            <span class="text">Выкл. звук</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="chat">
+      <div class="chat-header">
+        <h2># общий</h2>
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        <div class="message"><strong>Пользователь1:</strong> Привет!</div>
+        <div class="message"><strong>Пользователь2:</strong> Здарова!</div>
+        
+        <!-- WebRTC элементы будут добавляться сюда -->
+        <div id="webrtcElements" style="display: none;">
+            <p id="status">Ожидание разрешения на микрофон...</p>
+            <button id="allowMicBtn">Разрешить захват звука</button>
+            <button id="startAudioBtn" style="display:none;">Включить звук</button>
+        </div>
+      </div>
+      
+      <div class="chat-input">
+        <input type="text" placeholder="Написать сообщение..." />
+      </div>
+    </main>
+  </div>
+
+  <!-- Модалка входа -->
+  <div class="modal" id="loginModal">
+    <div class="modal-content">
+      <h2>Вход</h2>
+      <form id="loginForm">
+        <label for="loginUsername">Имя пользователя</label>
+        <input type="text" id="loginUsername" name="loginUsername" placeholder="Введите имя пользователя" required />
+        <label for="loginPassword">Пароль</label>
+        <input type="password" id="loginPassword" name="loginPassword" placeholder="Введите пароль" required />
+        <button type="submit">Войти</button>
+      </form>
+      <button class="link-button" id="showRegister">Регистрация</button>
+    </div>
+  </div>
+
+  <!-- Модалка регистрации -->
+  <div class="modal" id="registerModal" style="display:none;">
+    <div class="modal-content">
+      <h2>Регистрация</h2>
+      <form id="registerForm">
+        <label for="username">Имя пользователя</label>
+        <input type="text" id="username" name="username" placeholder="Введите имя" required />
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" placeholder="Введите email" required />
+        <label for="password">Пароль</label>
+        <input type="password" id="password" name="password" placeholder="Введите пароль" required />
+        <button type="submit">Зарегистрироваться</button>
+      </form>
+      <button class="link-button" id="backToLogin">Назад</button>
+    </div>
+  </div>
+
+  <!-- Модалка добавления канала -->
+  <div class="modal" id="addChannelModal" style="display: none;">
+    <div class="modal-content">
+      <h2>Новый канал</h2>
+      <form id="addChannelForm">
+        <label for="newChannelName">Название канала</label>
+		
+        <input type="text" id="newChannelName" placeholder="например, мемы" required />
+		
+        <label for="newPasswordC">Введите пароль</label>		
+	    <input type="text" id="newPasswordC" placeholder="Пароль" maxlength="20" />
+		
+        <label>Тип канала</label>
+        <div class="channel-type-toggle">
+          <input type="radio" id="typeText" name="channelType" value="text" checked />
+          <label for="typeText">Текстовый</label>
+
+          <input type="radio" id="typeMedia" name="channelType" value="media" />
+          <label for="typeMedia">Медиа</label>
+        </div>
+
+        <button type="submit">Добавить</button>
+      </form>
+      <button class="link-button" id="cancelAddChannel">Отмена</button>
+    </div>
+  </div>
+
+  <!-- Модалка добавления сервера -->
+  <div class="modal" id="addServerModal" style="display: none;">
+    <div class="modal-content">
+      <h2>Новый сервер</h2>
+      <form id="addServerForm">
+        <label for="newServerName">Название сервера</label>
+        <input type="text" id="newServerName" placeholder="Введите название сервера" maxlength="20" required />
+        <label for="newServerIcon">Иконка сервера (emoji)</label>
+        <input type="text" id="newServerIcon" placeholder="например, 🎮" maxlength="3" />
+        <label for="newServerPasswordS">Пароль для сервера</label>
+        <input type="text" id="newServerPasswordS" placeholder="Пароль" maxlength="20" />
+        <button type="submit">Создать</button>
+      </form>
+      <button class="link-button" id="cancelAddServer">Отмена</button>
+    </div>
+  </div>
+	
+	<!-- Модальное окно для медиапотоков -->
+	<div id="streamModal" class="stream-modal" style="display: none;">
+		<span class="close" id="closeStreamModal">&times;</span>
+		<h3 id="streamTitle">Медиапоток</h3>
+		
+		<div class="stream-container" id="streamContainer">
+		  <!-- Сюда будут вставляться видео/аудио элементы с потоками -->
+		</div>
+		
+		<div class="stream-controls">
+		  <button class="media-control-btn" id="stopStreamBtn">
+			<span class="icon">⏹️</span>
+			<span class="text">Остановить</span>
+		  </button>
+		</div>
+	</div>
+		
+<script>
+
+/*
+// Создание и использование класса
+// const streamPlayer = new StreamPlayer();
+
+// Примеры использования:
+// streamPlayer.openStream(mediaStream, "Мой стрим", "video");
+// streamPlayer.openMultiStream([
+//     { stream: stream1, name: "Участник 1", type: "video" },
+//     { stream: stream2, name: "Участник 2", type: "audio" }
+// ], "Групповой звонок");
+
+// Инициализация
+document.addEventListener('DOMContentLoaded', function() {
+    addStreamTestButtons();
+});*/
+
+// ===== КЛАСС StreamPlayer =====
+class StreamPlayer {
+    constructor() {
+        // Статический реестр всех открытых окон
+        if (!StreamPlayer.windows) {
+            StreamPlayer.windows = new Map();
+        }
+        
+        this.currentStreams = [];
+        this.isDragging = false;
+        this.isResizing = false;
+        this.dragOffsetX = 0;
+        this.dragOffsetY = 0;
+        this.dragElement = null;
+        this.resizeDirection = null;
+        
+        this.minWidth = 400;
+        this.minHeight = 300;
+        this.maxWidth = 1200;
+        this.maxHeight = 800;
+        
+        // Генерируем уникальный ID для этого плеера
+        this.windowId = 'stream-window-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    }
+
+    // Статический метод для получения существующего окна
+    static getWindow(windowId) {
+        return StreamPlayer.windows.get(windowId);
+    }
+
+    // Статический метод для закрытия всех окон
+    static closeAllWindows() {
+        StreamPlayer.windows.forEach((player, windowId) => {
+            player.close();
+        });
+        StreamPlayer.windows.clear();
+    }
+
+    // Статический метод для получения количества открытых окон
+    static getWindowCount() {
+        return StreamPlayer.windows.size;
+    }
+
+    // Создаем или переиспользуем модальное окно
+    createOrGetModal() {
+        // Если окно уже существует - используем его
+        let modal = document.getElementById(this.windowId);
+        
+        if (!modal) {
+            // Создаем новое модальное окно
+            modal = document.createElement('div');
+            modal.id = this.windowId;
+            modal.className = 'stream-modal';
+            modal.style.display = 'none';
+            
+            modal.innerHTML = `
+                <!--<span class="close close-modal">&times;</span>-->
+                <h3 id="${this.windowId}-title">Медиапоток</h3>
+                <div class="stream-container" id="${this.windowId}-container">
+                    <!-- Сюда будут вставляться видео/аудио элементы с потоками -->
+                </div>
+                <div class="stream-controls">
+                    <button class="media-control-btn stop-stream-btn">
+                        <span class="icon">⏹️</span>
+                        <!--<span class="text">Остановить</span>-->
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+        
+        return modal;
+    }
+
+    init() {
+        this.streamModal = this.createOrGetModal();
+        this.streamContainer = document.getElementById(`${this.windowId}-container`);
+        this.streamTitle = document.getElementById(`${this.windowId}-title`);
+        this.closeBtn = this.streamModal.querySelector('.close-modal');
+        this.stopStreamBtn = this.streamModal.querySelector('.stop-stream-btn');
+        
+        this.setupEventListeners();
+        this.setupDragging();
+        this.setupResizing();
+        this.applyInitialStyles();
+        
+        // Регистрируем окно в статическом реестре
+        StreamPlayer.windows.set(this.windowId, this);
+    }
+
+    applyInitialStyles() {
+        if (this.streamModal) {
+            // Позиционируем каждое новое окно со смещением
+            const offset = StreamPlayer.getWindowCount() * 30;
+            this.streamModal.style.width = '600px';
+            this.streamModal.style.height = '400px';
+            this.streamModal.style.left = (100 + offset) + 'px';
+            this.streamModal.style.top = (100 + offset) + 'px';
+            this.streamModal.style.minWidth = this.minWidth + 'px';
+            this.streamModal.style.minHeight = this.minHeight + 'px';
+            this.streamModal.style.maxWidth = this.maxWidth + 'px';
+            this.streamModal.style.maxHeight = this.maxHeight + 'px';
+        }
+    }
+
+    setupEventListeners() {
+        /*if (this.closeBtn) {
+            this.closeBtn.addEventListener('click', () => this.close(this.streamTitle.textContent));
+        }*/
+        
+        if (this.stopStreamBtn) {
+            this.stopStreamBtn.addEventListener('click', () => this.close(this.streamTitle.textContent));
+        }
+
+        /*this.streamModal.addEventListener('click', (event) => {
+            if (event.target === this.streamModal || 
+                event.target.classList.contains('close-modal')) {
+                this.close(this.streamTitle.textContent);
+            }
+        });*/
+
+        document.addEventListener('keydown', (e) => this.handleHotkeys(e));
+    }
+
+    setupDragging() {
+        const streamModalContent = this.streamModal;
+        
+        streamModalContent.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('resize-handle')) return;
+            
+            if (e.target === this.streamTitle || 
+                e.target.closest('h3') || 
+                e.target.classList.contains('stream-modal')) {
+                this.startDrag(e);
+            }
+        });
+
+        this.streamTitle.addEventListener('mousedown', (e) => this.startDrag(e));
+        
+        this.streamTitle.addEventListener('selectstart', (e) => {
+            if (this.isDragging) {
+                e.preventDefault();
+            }
+        });
+    }
+
+    setupResizing() {
+        const modal = this.streamModal;
+        
+        if (!modal.querySelector('.resize-handle')) {
+            this.createResizeHandles(modal);
+        }
+        
+        const handles = modal.querySelectorAll('.resize-handle');
+        handles.forEach(handle => {
+            handle.addEventListener('mousedown', (e) => this.startResize(e));
+        });
+    }
+
+    createResizeHandles(modal) {
+        const directions = ['n', 'e', 's', 'w', 'ne', 'nw', 'se', 'sw'];
+        
+        directions.forEach(dir => {
+            const handle = document.createElement('div');
+            handle.className = `resize-handle resize-${dir}`;
+            handle.style.cssText = this.getResizeHandleStyle(dir);
+            modal.appendChild(handle);
+        });
+    }
+
+    getResizeHandleStyle(direction) {
+        const baseStyle = `
+            position: absolute;
+            background: transparent;
+            z-index: 10;
+        `;
+        
+        const styles = {
+            'n': `top: 0; left: 0; right: 0; height: 4px; cursor: n-resize;`,
+            'e': `top: 0; right: 0; bottom: 0; width: 4px; cursor: e-resize;`,
+            's': `bottom: 0; left: 0; right: 0; height: 4px; cursor: s-resize;`,
+            'w': `top: 0; left: 0; bottom: 0; width: 4px; cursor: w-resize;`,
+            'ne': `top: 0; right: 0; width: 8px; height: 8px; cursor: ne-resize;`,
+            'nw': `top: 0; left: 0; width: 8px; height: 8px; cursor: nw-resize;`,
+            'se': `bottom: 0; right: 0; width: 8px; height: 8px; cursor: se-resize;`,
+            'sw': `bottom: 0; left: 0; width: 8px; height: 8px; cursor: sw-resize;`
+        };
+        
+        return baseStyle + styles[direction];
+    }
+
+    startResize(e) {
+        this.isResizing = true;
+        this.resizeDirection = e.target.className.replace('resize-handle resize-', '');
+        
+        const modal = this.streamModal;
+        this.startX = e.clientX;
+        this.startY = e.clientY;
+        this.startWidth = parseInt(modal.style.width) || 600;
+        this.startHeight = parseInt(modal.style.height) || 400;
+        this.startLeft = parseInt(modal.style.left) || 100;
+        this.startTop = parseInt(modal.style.top) || 100;
+        
+        document.addEventListener('mousemove', this.onResize.bind(this));
+        document.addEventListener('mouseup', this.stopResize.bind(this));
+        
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    onResize(e) {
+        if (!this.isResizing) return;
+        
+        const modal = this.streamModal;
+        const deltaX = e.clientX - this.startX;
+        const deltaY = e.clientY - this.startY;
+        
+        let newWidth = this.startWidth;
+        let newHeight = this.startHeight;
+        let newLeft = this.startLeft;
+        let newTop = this.startTop;
+        
+        switch(this.resizeDirection) {
+            case 'e':
+                newWidth = Math.max(this.minWidth, Math.min(this.startWidth + deltaX, this.maxWidth));
+                break;
+            case 's':
+                newHeight = Math.max(this.minHeight, Math.min(this.startHeight + deltaY, this.maxHeight));
+                break;
+            case 'se':
+                newWidth = Math.max(this.minWidth, Math.min(this.startWidth + deltaX, this.maxWidth));
+                newHeight = Math.max(this.minHeight, Math.min(this.startHeight + deltaY, this.maxHeight));
+                break;
+            case 'w':
+                newWidth = Math.max(this.minWidth, Math.min(this.startWidth - deltaX, this.maxWidth));
+                newLeft = this.startLeft + deltaX;
+                break;
+            case 'n':
+                newHeight = Math.max(this.minHeight, Math.min(this.startHeight - deltaY, this.maxHeight));
+                newTop = this.startTop + deltaY;
+                break;
+            case 'ne':
+                newWidth = Math.max(this.minWidth, Math.min(this.startWidth + deltaX, this.maxWidth));
+                newHeight = Math.max(this.minHeight, Math.min(this.startHeight - deltaY, this.maxHeight));
+                newTop = this.startTop + deltaY;
+                break;
+            case 'nw':
+                newWidth = Math.max(this.minWidth, Math.min(this.startWidth - deltaX, this.maxWidth));
+                newHeight = Math.max(this.minHeight, Math.min(this.startHeight - deltaY, this.maxHeight));
+                newLeft = this.startLeft + deltaX;
+                newTop = this.startTop + deltaY;
+                break;
+            case 'sw':
+                newWidth = Math.max(this.minWidth, Math.min(this.startWidth - deltaX, this.maxWidth));
+                newHeight = Math.max(this.minHeight, Math.min(this.startHeight + deltaY, this.maxHeight));
+                newLeft = this.startLeft + deltaX;
+                break;
+        }
+        
+        modal.style.width = newWidth + 'px';
+        modal.style.height = newHeight + 'px';
+        modal.style.left = newLeft + 'px';
+        modal.style.top = newTop + 'px';
+        
+        this.updateStreamContainer();
+    }
+
+    stopResize() {
+        this.isResizing = false;
+        this.resizeDirection = null;
+        
+        document.removeEventListener('mousemove', this.onResize.bind(this));
+        document.removeEventListener('mouseup', this.stopResize.bind(this));
+    }
+
+    updateStreamContainer() {
+        const videoElements = this.streamContainer.querySelectorAll('video, audio');
+        videoElements.forEach(element => {
+            if (element.tagName === 'VIDEO') {
+                element.style.maxHeight = 'calc(100% - 60px)';
+            }
+        });
+    }
+
+    startDrag(e) {
+        if (e.target.classList.contains('close') || 
+            e.target.closest('.stream-controls') ||
+            e.target.classList.contains('resize-handle')) {
+            return;
+        }
+        
+        this.isDragging = true;
+        this.dragElement = this.streamModal;
+        
+        const rect = this.dragElement.getBoundingClientRect();
+        this.dragOffsetX = e.clientX - rect.left;
+        this.dragOffsetY = e.clientY - rect.top;
+        
+        this.dragElement.style.cursor = 'grabbing';
+        this.dragElement.style.userSelect = 'none';
+        
+        document.addEventListener('mousemove', this.onDrag.bind(this));
+        document.addEventListener('mouseup', this.stopDrag.bind(this));
+        
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    onDrag(e) {
+        if (!this.isDragging || !this.dragElement) return;
+        
+        const newX = e.clientX - this.dragOffsetX;
+        const newY = e.clientY - this.dragOffsetY;
+        
+        const maxX = window.innerWidth - this.dragElement.offsetWidth;
+        const maxY = window.innerHeight - this.dragElement.offsetHeight;
+        
+        this.dragElement.style.left = Math.max(0, Math.min(newX, maxX)) + 'px';
+        this.dragElement.style.top = Math.max(0, Math.min(newY, maxY)) + 'px';
+    }
+
+    stopDrag() {
+        if (!this.isDragging) return;
+        
+        this.isDragging = false;
+        
+        if (this.dragElement) {
+            this.dragElement.style.cursor = 'move';
+            this.dragElement.style.userSelect = 'auto';
+            this.dragElement = null;
+        }
+        
+        document.removeEventListener('mousemove', this.onDrag.bind(this));
+        document.removeEventListener('mouseup', this.stopDrag.bind(this));
+    }
+
+    openStream(stream, name = "Медиапоток", type = "video") {
+        console.log("Opening stream in window:", this.windowId, stream, "Type:", type);
+        
+        // Инициализируем если еще не инициализирован
+        if (!this.streamModal) {
+            this.init();
+        }
+        
+        this.streamContainer.innerHTML = '';
+        this.currentStreams = [];
+
+        let mediaElement;
+        if (type === "audio") {
+		console.log("audio erwqew qre3w r32r32r32 r32r 32");
+            mediaElement = this.createAudioElement();
+			//const audioTrack = stream.getAudioTracks()[0];
+			//mediaElement.srcObject = new MediaStream([audioTrack]);
+        } else {
+		console.log("video)");
+            mediaElement = this.createVideoElement();
+			//const videoTracks = stream.getVideoTracks()[0];
+			//mediaElement.srcObject = new MediaStream([videoTracks]);
+        }
+		/*
+        let user = this.serverManager.users.get(peerName);
+		user.mediaStream = stream;
+		const streamPlayer = new StreamPlayer();
+		streamPlayer.openStream(user.mediaStream, peerName, "video");
+		user.streamPlayer = streamPlayer;*/
+		
+        mediaElement.srcObject = stream;
+        this.streamContainer.appendChild(mediaElement);
+        this.streamTitle.textContent = name;
+        this.currentStreams.push({ element: mediaElement, stream: stream, type: type , name: name});
+        //const audioTrack = stream.getAudioTracks()[0];
+		//audioElem.srcObject = new MediaStream([audioTrack]);
+        this.showModal();
+        
+        mediaElement.play().catch(e => {
+            console.log('Ошибка воспроизведения:', e);
+        });
+        
+        this.addStreamInfo(mediaElement, stream, type);
+    }
+
+    createAudioElement() {
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.style.width = '100%';
+        audio.style.padding = '40px 20px';
+        audio.style.background = '#2f3136';
+        audio.style.borderRadius = '8px';
+        return audio;
+    }
+
+    createVideoElement() {
+        const video = document.createElement('video');
+        video.controls = true;
+        video.autoplay = true;
+        video.muted = true;
+        video.style.width = '100%';
+        video.style.maxHeight = 'calc(100% - 60px)';
+        video.style.objectFit = 'contain';
+        video.style.background = '#000';
+        video.style.borderRadius = '8px';
+        return video;
+    }
+
+    addStreamInfo(mediaElement, stream, type) {
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'stream-info';
+        infoDiv.style.padding = '10px';
+        infoDiv.style.background = '#2f3136';
+        infoDiv.style.borderRadius = '4px';
+        infoDiv.style.marginTop = '10px';
+        infoDiv.style.color = '#b9bbbe';
+        infoDiv.style.fontSize = '14px';
+        
+        if (type === "video") {
+            mediaElement.addEventListener('loadedmetadata', () => {
+                infoDiv.innerHTML = `
+                    <strong>Информация о потоке:</strong><br>
+                    Разрешение: ${mediaElement.videoWidth}×${mediaElement.videoHeight}<br>
+                    Треки: ${stream.getTracks().length} (${stream.getVideoTracks().length} видео, ${stream.getAudioTracks().length} аудио)
+                `;
+            });
+        } else {
+            infoDiv.innerHTML = `
+                <strong>Аудио поток</strong><br>
+                Треки: ${stream.getTracks().length} аудио
+            `;
+        }
+    }
+
+    showModal() {
+        this.streamModal.style.display = 'flex';
+    }
+
+    stopAllStreams() {
+        this.currentStreams.forEach(streamData => {
+            if (streamData.stream) {
+                streamData.stream.getTracks().forEach(track => {
+                    track.stop();
+                });
+            }
+            let user = serverManager.users.get(streamData.name);
+			serverManager.NetClient.disableVideo(streamData.name);
+            if (streamData.element) {
+                streamData.element.srcObject = null;
+                streamData.element.pause();
+            }
+        });
+        
+        this.currentStreams = [];
+        this.streamContainer.innerHTML = '<div class="no-stream">Потоки остановлены</div>';
+    }
+	
+	close_all() {
+		this.stopAllStreams();
+        this.streamModal.style.display = 'none';
+        
+        // Удаляем из реестра
+        StreamPlayer.windows.delete(this.windowId);
+	}
+	
+    close(peerName) {
+		
+		let streamData = this.currentStreams[0];
+			
+            if(peerName===streamData.name){		
+				try {
+					// Останавливаем stream треки
+					if (streamData.stream) {
+						streamData.stream.getTracks().forEach(track => {
+							try { track.stop(); } catch (e) { console.error('Track stop error:', e); }
+						});
+					}
+
+					// Отключаем видео через NetClient
+					try {
+						let user = serverManager.users.get(streamData.name);
+						serverManager.NetClient?.disableVideo?.(streamData.name);
+					} catch (e) { console.error('NetClient error:', e); }
+
+					// Очищаем media element
+					if (streamData.element) {
+						try {
+							streamData.element.srcObject = null;
+							streamData.element.pause();
+							streamData.element.removeAttribute('src');
+							streamData.element.load();
+							streamData.element.style.display = 'none';
+						} catch (e) { console.error('Element cleanup error:', e); }
+					}
+
+					// Скрываем модальное окно
+					try {
+						this.streamModal.style.display = 'none';
+					} catch (e) { console.error('Modal hide error:', e); }
+
+				} catch (globalError) {
+					console.error('Stream cleanup failed:', globalError);
+				}
+
+			}
+        
+
+        serverManager.NetClient.disableVideo(peerName);
+        this.currentStreams = [];
+        this.streamContainer.innerHTML = '<div class="no-stream">Потоки остановлены</div>';
+		
+    }
+
+	cleanMediaElement(element) {
+		element.pause();
+		element.srcObject = null;
+		element.removeAttribute('src');
+		element.currentTime = 0;
+		element.load();
+		
+		// Удаляем все обработчики
+		const clone = element.cloneNode(false);
+		element.parentNode.replaceChild(clone, element);
+		
+		return clone; // возвращаем чистый элемент
+	}
+    
+	handleHotkeys(e) {
+        if (this.streamModal.style.display === 'flex' && this.currentStreams.length > 0) {
+            switch(e.key) {
+                case 'Escape':
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen();
+                    } else {
+                        this.close_all();
+                    }
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    this.togglePlayPause();
+                    break;
+                case 'm':
+                case 'M':
+                    e.preventDefault();
+                    this.toggleMute();
+                    break;
+                case 'f':
+                case 'F':
+                    e.preventDefault();
+                    this.toggleFullscreen();
+                    break;
+            }
+        }
+    }
+
+    togglePlayPause() {
+        this.currentStreams.forEach(streamData => {
+            if (streamData.element.paused) {
+                streamData.element.play();
+            } else {
+                streamData.element.pause();
+            }
+        });
+    }
+
+    toggleMute() {
+        this.currentStreams.forEach(streamData => {
+            streamData.element.muted = !streamData.element.muted;
+        });
+    }
+
+    toggleFullscreen() {
+        const mediaElement = this.currentStreams[0]?.element;
+        if (mediaElement) {
+            if (!document.fullscreenElement) {
+                if (mediaElement.requestFullscreen) {
+                    mediaElement.requestFullscreen();
+                } else if (mediaElement.webkitRequestFullscreen) {
+                    mediaElement.webkitRequestFullscreen();
+                }
+            } else {
+                document.exitFullscreen();
+            }
+        }
+    }
+
+    getActiveStreams() {
+        return this.currentStreams;
+    }
+
+    isOpen() {
+        return this.streamModal.style.display === 'flex';
+    }
+
+    setTitle(title) {
+        this.streamTitle.textContent = title;
+    }
+
+    destroy() {
+        this.stopAllStreams();
+        this.closeAll();
+        
+        // Удаляем DOM элемент
+        if (this.streamModal && this.streamModal.parentNode) {
+            this.streamModal.parentNode.removeChild(this.streamModal);
+        }
+        
+        document.removeEventListener('keydown', this.handleHotkeys.bind(this));
+        document.removeEventListener('mousemove', this.onDrag.bind(this));
+        document.removeEventListener('mouseup', this.stopDrag.bind(this));
+        document.removeEventListener('mousemove', this.onResize.bind(this));
+        document.removeEventListener('mouseup', this.stopResize.bind(this));
+    }
+}
+
+// Инициализация статического свойства
+StreamPlayer.windows = new Map();
+
+// ===== КЛАСС User =====
+class User {
+	constructor(name)
+	{
+		// Основная идентификация
+		this.name = name;
+		this.active = null;
+		
+		// Идентификаторы подключения
+		this.channel_id = null;
+		this.server_id = null;
+		this.list_server_id = null;
+		
+		// Статус стриминга
+		this.is_streaming = "off";
+		
+		// UI элементы для отображения статуса
+		this.icon_video_streaming = document.createElement('span');
+		this.icon_video_streaming.textContent = '';
+		this.icon_video_streaming.title = '';
+		
+		// WebRTC соединения
+		this.send_media_peer = null;
+		this.receive_media_peer = null;
+		
+		// Таймеры и счетчики
+		this.timer_count = 0;
+		
+		// Медиа потоки (отправка)
+		this.mediaStream = null;
+		this.mediaStreamA = null;
+		this.localStream = null;
+		
+		// Элементы воспроизведения (прием)
+		this.streamPlayer = null;
+		this.streamPlayerA = null;
+		
+		// Аудио управление
+		this.audioContainer = null;
+		this.audio = null;
+		this.muted = "no";
+		this.deaf = "no";
+	}
+	setChannel_id(channel_id)
+	{
+		this.channel_id = channel_id;
+	}
+	getChannel_id()
+	{
+		return this.channel_id;
+	}
+	setActive(active)
+	{
+		this.active = active;
+	}
+	getActive()
+	{
+		return this.active;
+	}
+	setServer_id(server_id)
+	{
+		this.server_id = server_id;
+	}
+	getServer_id()
+	{
+		return this.server_id;
+	}
+	setIcon_video_streaming(icon_video_streaming)
+	{
+		this.icon_video_streaming = icon_video_streaming;
+	}
+	getIcon_video_streaming()
+	{
+		return this.icon_video_streaming;
+	}
+	setIcon_video_streaming_on()
+	{
+		this.icon_video_streaming.textContent = '📹';
+		this.icon_video_streaming.title = 'Стримит';
+	}
+	setIcon_video_streaming_off()
+	{
+		this.icon_video_streaming.textContent = '';
+		this.icon_video_streaming.title = '';
+	}
+	setIs_streaming(is_streaming)
+	{
+		this.is_streaming = is_streaming;
+		console.log(is_streaming);
+		if(is_streaming==="on")
+			this.setIcon_video_streaming_on();
+		else
+			this.setIcon_video_streaming_off();
+	}
+	getIs_streaming()
+	{
+		return this.is_streaming;
+	}
+	setSend_media_peer(send_media_peer)
+	{
+		this.send_media_peer = send_media_peer;
+	}
+	getSend_media_peer()
+	{
+		return this.send_media_peer;
+	}
+	setReceive_media_peer(receive_media_peer)
+	{
+		this.receive_media_peer = receive_media_peer;
+	}
+	getReceive_media_peer()
+	{
+		return this.receive_media_peer;
+	}
+
+}
+
+// ===== КЛАСС NetClient =====
+class NetClient {
+    constructor(name, serverManager) {
+        this.name = name;
+        //this.room = "room1";
+        this.signalingUrl = "wss://domain:8443";
+        this.turnServerUrl = "turn:domain:3478";
+        this.staticAuthSecret = "your_secret_key";
+
+        this.localStream = null;
+		//this.getUserMedia();
+        this.peerConnections = {};
+        this.useTurnMap = {};
+        this.turnCredentials = null;
+		this.muted = false;
+		
+        // Состояния медиа
+        this.isCameraEnabled = false;
+        this.isScreenSharing = false;
+        this.isMicEnabled = true;
+		this.mediaStream = null;
+		this.senderName = null;
+
+        this.socket = null;
+        this.socketReady = false;
+		this.number = 0;
+        this.messageQueue = [];
+		console.log("hola     amigo");
+        this.init();
+		this.serverManager = serverManager;
+		this.stopMediaStream();
+    }
+
+	setServerManager(serverManager) {
+		this.ServerManager = serverManager;
+	}
+	
+    init() {
+        //this.name = prompt("Введите имя:");
+        this.setupEventListeners();
+        this.connectSignaling();
+    }
+
+    setupEventListeners() {
+        document.getElementById('allowMicBtn').addEventListener('click', () => this.getUserMedia());
+        document.getElementById('startAudioBtn').addEventListener('click', () => this.startAudio());
+    }
+
+    connectRoom(room, server_id) {
+        this.room = room;
+		this.server_id = server_id;
+        this.safeSend({ type: "join_room", room: this.room , server_id: this.server_id});
+        console.log("hola   join_room   amigo" + this.room);
+    }
+    
+    connectSignaling() {
+
+		this.getUserMedia();
+			
+	
+			this.socket = new WebSocket(this.signalingUrl);
+			this.socket.binaryType = 'arraybuffer';
+			this.socket.onopen = () => {
+				this.socketReady = true;
+				this.log("WebSocket открыт");
+				this.serverManager.ui.showLoginModal();					
+				for (const msg of this.messageQueue) {
+					this.socket.send(msg);
+				}
+				this.messageQueue = [];
+
+				// Решение: отправлять ping/pong сообщения
+				setInterval(() => {
+					if (this.socket.readyState === WebSocket.OPEN) {
+						this.safeSend({ type: "ping", to: this.name });
+					}
+				}, 900000); // каждые 900 секунд				
+				
+			};
+
+			this.socket.onmessage = async (event) => {
+				let messageText;
+				
+				// Обрабатываем разные типы данных
+				if (event.data instanceof ArrayBuffer) {
+					// Декодируем бинарные данные
+					const decoder = new TextDecoder('utf-8');
+					messageText = decoder.decode(event.data);
+					console.log("Получены бинарные данные, декодировано:", messageText.length, "символов");
+				} else if (event.data instanceof Blob) {
+					// Обрабатываем Blob данные
+					try {
+						messageText = await event.data.text();
+					} catch (error) {
+						console.error("Ошибка чтения Blob:", error);
+						return;
+					}
+				} else {
+					// Обычные текстовые данные
+					messageText = event.data;
+				}
+				
+				// Парсим JSON
+				let data;
+				try {
+					data = JSON.parse(messageText);
+				} catch (err) {
+					console.error("Невозможно распарсить сообщение", messageText);
+					return;
+				}
+				
+				this.log("Получено сообщение: " + JSON.stringify(data));
+				await this.handleSignalingMessage(data);
+			};
+
+			this.socket.onclose = () => {
+				this.log("WebSocket закрыт");
+				
+				console.log("closeAllPeerConnections");
+				this.closeAllPeerConnections();
+				this.serverManager.clearUsers();
+				this.connectSignaling();
+			};
+
+			this.socket.onerror = (err) => {
+				this.log("Ошибка WebSocket: " + err.message);
+				
+				console.log("closeAllPeerConnections");			
+				this.closeAllPeerConnections();
+				this.serverManager.clearUsers();
+				this.connectSignaling();	
+			};
+		//}
+    }
+
+    async handleSignalingMessage(data) {
+		try{
+			const from = data.from;
+			//console.log(data.server_id); 
+			console.log(data.type);
+			console.log(data);		
+			switch (data.type) {
+				case "register":
+						console.log("hola   register222   amigo");
+				        this.serverManager.ui.hideAuthModals();						
+						// Обрабатываем вложенные данные клиентов
+						for (const key in data) {
+							console.log(key);
+							if (key !== "type" && key !== "name") {
+								const clientData = data[key];
+								if (clientData.room && clientData.server_id) {
+									
+									let user;
+									if (this.serverManager.users.has(key)) {
+										user = this.serverManager.users.get(key);
+									} else {
+										user = new User(key);
+										this.serverManager.users.set(key, user);
+									}
+									console.log(clientData.shared_video);
+									user.setIs_streaming(clientData.shared_video);
+									
+									this.serverManager.addUserToChannel(
+										clientData.server_id,
+										clientData.room,
+										key // clientName является ключом
+									);
+
+									if(clientData.shared_video==="on") {
+										console.log("yes, it work");
+										this.serverManager.updateUserIcon(key,'📹','Стримит');
+
+									}
+								}
+							}
+						}
+				
+				//this.connectRoom(this.serverManager.channel.id, this.serverManager.currentServer.id);	
+						
+					break;
+				case "ready":
+					if (from !== this.name && !this.peerConnections[from]) {
+						this.log(`Пользователь ${from} готов — создаём offer`);
+						console.log("hola   ready   amigo");
+						await this.createOffer(from);
+					}
+					break;
+				case "shared_video":
+
+					let user;
+					user = this.serverManager.users.get(data.from);
+			
+					if(data.state === "on") { 
+
+						this.serverManager.updateUserIcon(data.from,'📹', 'Стримит');						
+					}
+					else
+						this.serverManager.updateUserIcon(data.from, "","");
+					
+					break;			
+				case "offer":
+					this.log(`Получен offer от ${from}`);
+					console.log("hola   offer   amigo");
+					console.log(this.serverManager.getActiveMediaChannel().id);
+					console.log(data.room);
+					await this.handleOffer(from, data.sdp, data.room);
+					break;
+				case "answer":
+					this.log(`Получен answer от ${from}`);
+					console.log("hola   answer   amigo");
+					try {
+						const pc = this.peerConnections[from];
+						if (pc && pc.signalingState !== 'stable') {
+							await pc.setRemoteDescription(
+								new RTCSessionDescription({ type: "answer", sdp: data.sdp })
+							);
+						} else if (pc) {
+							console.log(`✅ ${from} - уже stable, пропускаем answer`);
+						}
+					} catch (error) {
+						console.error('setRemoteDescription failed:', error);
+					}
+					break;
+				case "ice-candidate":
+					this.log(`Получен ICE-кандидат от ${from}: ${JSON.stringify(data.candidate)}`);
+					if (this.peerConnections[from]) {
+						try {
+							await this.peerConnections[from].addIceCandidate(new RTCIceCandidate(data.candidate));
+						} catch (e) {
+							this.log(`Ошибка добавления ICE-кандидата: ${e.message}`);
+						}
+					}
+					break;
+				case "user_left":
+					this.log(`Пользователь ${from} покинул комнату`);
+					this.closePeerConnection(from);
+					break;
+				case "video":
+					this.log(`Пользователь ${from} просит получить картинку`);
+					
+					this.processVideoMessage(data.from, this.mediaStream, data.state);
+					
+					break;
+				case "join_room_all":
+				//console.log("23211233211all");
+				console.log(data + "  ");
+					
+					this.serverManager.addUserToChannel(
+						data.server_id,
+						data.room,
+						from,
+						1
+					);
+					
+					
+					this.log(`Пользователь ${from} join_room_all`);
+					//this.closePeerConnection(from);
+					break;	
+				case "user_left_all":
+					this.serverManager.addUserToChannel(
+						"",
+						"",
+						from,
+						0
+					);
+
+					this.log(`Пользователь ${from} user_left_all`);
+					//this.closePeerConnection(from);
+					
+					break;
+				case "message":
+					
+					this.serverManager.sendMessageToChannel(data.from, data.messageText);
+					break;
+				case "joined":				
+					this.safeSend({ type: "ready", name: this.name });
+					break;		
+				case "servers":
+
+
+					this.log(`servers\n`);
+					let result = this.parseAndGroupData(data);
+					let initialServers = this.transformToInitialServers(result);
+					this.serverManager.servers = initialServers;
+					console.log(initialServers);				
+					
+					this.serverManager.initialize(initialServers);//пока что костыль
+					this.serverManager.addUserToServer(this.serverManager.getCurrentServer().id, username);
+					
+					this.serverManager.ui.renderServers();
+					this.serverManager.ui.loadServerContent(serverManager.getCurrentServer());
+					console.log('Серверы:', result.servers);
+					console.log('Каналы по серверам:', result.channelsByServer);
+					this.addUsers();
+					break;	
+			case "server_added":
+					this.log(`server_added\n`);
+					let result_as = this.parseAndGroupData(data);
+				
+					// Просто добавляем сервер в коллекцию
+					let newServer = this.transformToInitialServers(result_as);
+
+					
+					const server = new Server(newServer[0].id, newServer[0].name, newServer[0].icon);
+					
+					Object.values(data).forEach(item => {
+					  if (item && typeof item === 'object' && 'id_full' in item) {
+						console.log('Найден объект с id_full:', item.id_full);
+							server.addChannel(item.id_full, item.name, item.type);
+						console.log(item);
+					  }
+					});
+					
+					this.serverManager.servers.push(server);
+				
+					this.serverManager.emit('serverCreated', { server });				
+
+					this.serverManager.ui.renderServers();
+					this.serverManager.ui.loadServerContent(serverManager.getCurrentServer());
+					this.safeSend({ type: "get_members", type_get: "server", name: newServer[0].name });
+					console.log('Добавлен новый сервер:', newServer);
+					console.log('Добавлен новый сервер:', this.serverManager.servers);
+					break;
+			case "channel_added":
+					this.log(`channel_added\n`);
+					let convertedChannel = this.convertChannelData(data);
+					console.log(convertedChannel);
+		
+					this.log(convertedChannel + `channel_added\n`);
+
+					//this.log(this.serverManager.servers[data.server_id-1].icon + `channel_added\n`);
+					console.log(data.server_id, convertedChannel.id, convertedChannel.name, convertedChannel.type);
+					this.serverManager.servers.forEach(server => {
+						if (server.id === data.server_id) {
+							server.addChannel(convertedChannel.id, convertedChannel.name, convertedChannel.type);
+						}
+					});
+					console.log('Добавлен новый канал:', convertedChannel);			
+
+					this.serverManager.ui.renderServers();
+					this.serverManager.ui.loadServerContent(serverManager.getCurrentServer());
+					
+					this.safeSend({ type: "get_members", type_get: "channel", name: convertedChannel.id });
+					console.log('Добавлен новый канал:', convertedChannel);
+					console.log('Добавлен новый канал:', this.serverManager.servers);
+					break;					
+				default:
+					console.warn("Неизвестный тип от signaling:", data.type);
+			}
+		} catch (error) {
+			console.error('Error handling signaling message:', error);
+		}
+		// Использование
+
+	}
+	
+	convertChannelData(serverData) {
+		console.log("=== convertChannelData DEBUG ===");
+		console.log("Input data:", serverData);
+		
+		// Находим ключ канала (типа "1-8")
+		const channelKey = Object.keys(serverData).find(key => key.includes('-'));
+		console.log("Found channel key:", channelKey);
+		
+		if (!channelKey) {
+			console.log("No channel key found!");
+			return null;
+		}
+		
+		const channel = serverData[channelKey];
+		console.log("Channel data:", channel);
+		
+		// Проверяем обязательные поля
+		if (!channel.id_server || !channel.id || !channel.name) {
+			console.log("Missing required fields in channel data");
+			return null;
+		}
+		
+		// Преобразуем в нужный формат
+		const result = {
+			id: `${channel.id_server}-${channel.id}`,
+			name: channel.name,
+			type: channel.type || 'text', // значение по умолчанию
+			participants: [],
+			messages: [
+				{user: 'Геймер1', text: 'Кто сегодня в CS?'},
+				{user: 'Геймер2', text: 'Я готов!'}
+			],
+			createdAt: new Date(channel.created_at_t),
+			isActive: false,
+			opened: false
+		};
+		
+		console.log("Converted result:", result);
+		console.log("=== DEBUG END ===");
+		
+		return result;
+	}
+
+    async getUserMedia() {
+        try {
+			if(this.localStream===null) {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+				audio: {
+					noiseSuppression: true,
+					echoCancellation: true,      // Обычно идет вместе с noiseSuppression
+					autoGainControl: true        // Тоже полезно для голосового чата
+				}
+			});
+            this.localStream = stream;
+            this.log("Получен локальный аудиопоток");
+			
+            document.getElementById('allowMicBtn').style.display = 'none';
+            document.getElementById('startAudioBtn').style.display = 'inline-block';
+			}
+            // Генерируем TURN credentials сразу и сохраняем
+            this.turnCredentials = await this.generateTurnCredentials(this.name, this.staticAuthSecret);
+            this.log(`TURN credentials получены: username=${this.turnCredentials.username}`);
+
+            this.safeSend({ type: "ready", name: this.name });
+        } catch (err) {
+            this.log("Ошибка доступа к микрофону: " + err.message);
+            console.error(err);
+        }
+    }
+
+	addUsers() {
+		for (const [clientName, user] of this.serverManager.users) {
+				
+				// Добавляем пользователя в канал
+
+				if (user.channel_id && user.server_id) {
+					let server_id = user.server_id;
+					let channel_id = user.channel_id;
+					
+					user.server_id = "";
+					user.channel_id = "";				
+					this.serverManager.addUserToChannel(
+						server_id,
+						channel_id,
+						clientName
+					);
+					console.log("clientName");
+				}
+
+				// Обновляем иконку если стримит
+				if (user.is_streaming === "on") {
+					console.log("yes, it work");
+					this.serverManager.updateUserIcon(clientName, '📹', 'Стримит');
+				}
+			}
+	}
+	
+	transformToInitialServers(result) {
+		if (!result?.servers) {
+			console.warn('No servers data available');
+			return [];
+		}
+
+		try {
+			// Создаем маппинг серверов по их ID для быстрого доступа
+			const serversMap = new Map();
+			
+			// Сначала создаем все серверы (без каналов)
+			Object.values(result.servers).forEach(server => {
+				if (!server || typeof server !== 'object') return;
+				
+				const serverId = Number(server.id);
+				serversMap.set(serverId, {
+					id: `${server.id}`,
+					name: server.name || 'Без названия',
+					icon: server.icon || '🏠',
+					channels: [], 
+					members: [],
+					createdAt: server.created_at_t ? new Date(server.created_at_t) : new Date(),
+					isActive: !server.is_deleted
+				});
+			});
+
+			console.log('Servers created:', Array.from(serversMap.keys()));
+
+
+			// Если channelsByServer уже сгруппированы по serverId
+			Object.entries(result.channelsByServer).forEach(([serverId, channels]) => {
+				const server = serversMap.get(Number(serverId));
+				
+				if (server && Array.isArray(channels)) {
+					channels.forEach(channel => {
+						if (!channel || typeof channel !== 'object') return;
+						
+						server.channels.push({
+							id: channel.id_full,
+							name: channel.name || 'Без названия',
+							type: channel.type || 'text',
+							participants: [],
+							messages: [],
+							createdAt: channel.created_at_t ? new Date(channel.created_at_t) : new Date(),
+							isActive: !channel.is_deleted,
+							opened: false
+						});
+						console.log(`Added channel "${channel.name}" to server ${serverId}`);
+					});
+				}
+			});
+
+
+			return Array.from(serversMap.values());
+			
+		} catch (error) {
+			console.error('Error in transformToInitialServers:', error);
+			return [];
+		}
+	}
+
+	// === МЕТОД ДЛЯ ЗАХВАТА ЭКРАНА С СИСТЕМНЫМ ЗВУКОМ ===
+
+	async captureScreenWithSystemAudio(echoCancellation = false) {
+		try {
+			// Проверяем поддержку API
+			if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+				this.log("❌ Браузер не поддерживает демонстрацию экрана");
+				return null;
+			}
+
+			// Запрашиваем доступ к экрану с системным звуком
+			const screenStream = await navigator.mediaDevices.getDisplayMedia({
+				video: {
+					cursor: 'always',
+					displaySurface: 'browser',
+					width: { ideal: 1920 },
+					height: { ideal: 1080 },
+					frameRate: { ideal: 30 }
+				},
+				audio: {
+					echoCancellation: echoCancellation,
+					noiseSuppression: true,
+					sampleRate: 44100,
+					channelCount: 2,
+					autoGainControl: false
+
+				}
+			});
+			
+			/*this.localStream.getAudioTracks().forEach(track => {
+				screenStream.addTrack(track);
+			});*/
+			
+			this.mediaStream = screenStream;
+			
+			// Выводим в превью
+			const preview = document.getElementById('localVideoPreview');
+			if (preview) {
+				preview.srcObject = screenStream;
+				preview.style.display = 'block';
+			}
+
+			this.log("✅ Захват экрана с системным звуком успешен");
+
+			// Логируем информацию о захваченных треках
+			const videoTrack = screenStream.getVideoTracks()[0];
+			const audioTrack = screenStream.getAudioTracks()[0];
+			
+			let info = "📊 Захвачен поток экрана:";
+			if (videoTrack) {
+				const settings = videoTrack.getSettings();
+				info += ` Видео ${settings.width}x${settings.height}`;
+			}
+			if (audioTrack) {
+				info += ` + системный звук`;
+			}
+			this.log(info);
+			this.serverManager.updateUserIcon(this.serverManager.currentUserName,'📹', 'Стримит');
+			this.safeSend({ type:"shared_video", room: this.serverManager.getActiveMediaChannel().id, state: "on" });
+			return screenStream;
+
+		} catch (err) {
+			if (err.name === 'NotAllowedError') {
+				this.log("❌ Доступ к демонстрации экрана запрещен пользователем");
+			} else if (err.name === 'NotFoundError') {
+				this.log("❌ Не найдены доступные источники для демонстрации");
+			} else {
+				this.log(`❌ Ошибка захвата экрана: ${err.message}`);
+			}
+			return null;
+		}
+	}
+
+	async captureCamera() {
+		try {
+			// Проверяем поддержку API
+			if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+				this.log("❌ Браузер не поддерживает доступ к камере");
+				return null;
+			}
+
+			// Запрашиваем доступ к камере (только видео, без аудио)
+			const cameraStream = await navigator.mediaDevices.getUserMedia({
+				video: {
+					width: { ideal: 1280 },
+					height: { ideal: 720 },
+					frameRate: { ideal: 30 }
+				},
+				audio: false // Без звука
+			});
+			
+			/*this.localStream.getAudioTracks().forEach(track => {
+				cameraStream.addTrack(track);
+			});*/
+
+			this.mediaStream = cameraStream;
+
+			// Выводим в превью
+			const preview = document.getElementById('localVideoPreview');
+			if (preview) {
+				preview.srcObject = cameraStream;
+				preview.style.display = 'block';
+			}
+
+			this.log("✅ Захват камеры успешен");
+
+			// Логируем информацию о захваченных треках
+			const videoTrack = cameraStream.getVideoTracks()[0];
+			
+			let info = "📹 Захвачен поток камеры:";
+			if (videoTrack) {
+				const settings = videoTrack.getSettings();
+				info += ` Видео ${settings.width}x${settings.height}`;
+			}
+			this.log(info);
+			this.safeSend({ type:"shared_video", room: this.serverManager.getActiveMediaChannel().id, state: "on" });
+			return cameraStream;
+
+		} catch (err) {
+			if (err.name === 'NotAllowedError') {
+				this.log("❌ Доступ к камере запрещен пользователем");
+			} else if (err.name === 'NotFoundError') {
+				this.log("❌ Не найдены доступные камеры");
+			} else {
+				this.log(`❌ Ошибка захвата камеры: ${err.message}`);
+			}
+			return null;
+		}
+	}
+
+	async stopMediaStream() {
+		try {
+			if (this.mediaStream) {
+				// Останавливаем все треки в потоке
+				this.mediaStream.getTracks().forEach(track => {
+					track.stop();
+				});//track.stop();
+				this.mediaStream = null;
+			}
+
+			// Очищаем превью
+			const preview = document.getElementById('localVideoPreview');
+			if (preview) {
+				preview.srcObject = null;
+				preview.style.display = 'none';
+			}
+
+			// Отправляем сообщение о прекращении трансляции
+			this.safeSend({ type:"shared_video", room: this.serverManager.getActiveMediaChannel().id, state: "off" });
+			this.serverManager.updateUserIcon(this.serverManager.currentUserName,'', '');
+			this.log("✅ Трансляция остановлена");
+			return true;
+			
+		} catch (err) {
+			this.log(`❌ Ошибка при остановке трансляции: ${err.message}`);
+			return false;
+		}
+	}
+
+    startAudio() {
+        for (const peerName in this.peerConnections) {
+            const audioElem = document.getElementById(`audioelem-${peerName}`);
+            if (audioElem) {
+                audioElem.play().catch(err => {
+                    console.warn('Ошибка при воспроизведении аудио:', err);
+                });
+            }
+        }
+        document.getElementById('startAudioBtn').style.display = 'none';
+        this.log('Звук включен пользователем');
+    }
+
+	parseAndGroupData(data) {
+	
+		const servers = {};
+		const channelsByServer = {};
+		
+		Object.entries(data).forEach(([key, item]) => {
+			if (key === 'type') return;
+			
+			if (item.server === 'server') {
+				servers[item.id] = item;
+				channelsByServer[item.id] = [];
+			} else if (item.channel === 'channel') {
+				if (!channelsByServer[item.id_server]) {
+					channelsByServer[item.id_server] = [];
+				}
+				channelsByServer[item.id_server].push(item);
+			}
+		});
+		
+		return {
+			type: data.type,
+			servers,
+			channelsByServer
+		};
+	}
+
+    async generateTurnCredentials(username, secret) {
+        const unixTime = Math.floor(Date.now() / 1000) + 24 * 3600;
+        const turnUsername = `${unixTime}:${username}`;
+
+        const encoder = new TextEncoder();
+        const keyData = encoder.encode(secret);
+        const msgData = encoder.encode(turnUsername);
+
+        const cryptoKey = await crypto.subtle.importKey(
+            "raw",
+            keyData,
+            { name: "HMAC", hash: "SHA-1" },
+            false,
+            ["sign"]
+        );
+
+        const signature = await crypto.subtle.sign("HMAC", cryptoKey, msgData);
+        const b64signature = btoa(String.fromCharCode(...new Uint8Array(signature)));
+
+        return { username: turnUsername, password: b64signature };
+    }
+
+	createPeerConnection(peerName) {
+		if (!this.turnCredentials) {
+			this.log("Ошибка: TURN credentials ещё не сгенерированы!");
+			return null;
+		}
+
+		const iceServers = [
+			// TURN
+			{
+				urls: this.turnServerUrl,
+				username: this.turnCredentials.username,
+				credential: this.turnCredentials.password
+			},
+			// STUN через тот же хост
+			{
+				urls: `stun:domain:3478`
+			}
+		];
+
+		this.log(`Peer ${peerName}: Используем только TURN сервер`);
+
+		const pc = new RTCPeerConnection({
+			iceServers,
+			iceTransportPolicy: "all" // Важно: только relay кандидаты
+		});
+
+		pc.onicecandidate = (evt) => {
+			if (evt.candidate) {
+				this.log(`Локальный кандидат для ${peerName}: ${JSON.stringify(evt.candidate)}`);
+				// Логируем тип кандидата для диагностики
+				if (evt.candidate.type) {
+					this.log(`Тип кандидата: ${evt.candidate.type}`);
+				}
+				this.safeSend({
+					type: "ice-candidate",
+					candidate: evt.candidate,
+					to: peerName,
+					from: this.name
+				});
+			}
+		};
+
+		pc.oniceconnectionstatechange = () => {
+			this.log(`ICE состояние (${peerName}): ${pc.iceConnectionState}`);
+			
+			if (["failed", "disconnected"].includes(pc.iceConnectionState)) {
+				this.log(`Соединение с ${peerName} не удалось через TURN`);
+				
+/*				// Автоматически закрываем соединение при полном отключении
+				setTimeout(() => {
+					
+					
+					if (this.serverManager.users.has(peerName)) {
+						user = this.serverManager.users.get(peerName);
+						if(user.timer_count===20)
+						if (pc.iceConnectionState === "disconnected" || pc.iceConnectionState === "failed") {
+							this.log(`Автоматическое закрытие соединения с ${peerName} из-за состояния: ${pc.iceConnectionState}`);
+							this.closePeerConnection(peerName);
+						}
+						else
+							user.timer_count++;
+					}
+				}, 15000);*/
+			}
+			/*else
+			{
+				if (this.serverManager.users.has(peerName)) {
+					console.log(peerName);					
+					console.log(user.timer_count);
+					user = this.serverManager.users.get(peerName);	
+
+					user.timer_count=0;
+
+				
+				
+				}	
+			}*/
+		};
+
+		pc.onicecandidateerror = (event) => {
+			this.log(`Ошибка ICE кандидата для ${peerName}: ${event.errorCode} - ${event.errorText}`);
+		};
+
+		if (this.localStream) {
+			this.localStream.getTracks().forEach(track => pc.addTrack(track, this.localStream));
+		}
+		
+		pc.ontrack = (evt) => {
+			const track = evt.track;
+			
+			this.log(`Получен ${track.kind} трек от ${peerName}`);
+			
+			// Обрабатываем все потоки, содержащие этот трек
+			evt.streams.forEach((stream, index) => {
+				console.log(`Поток [${index}]:`, stream.id);
+				
+				if (track.kind === 'video') {
+					this.attachMedia(peerName, stream);
+				} else if (track.kind === 'audio') {
+					this.attachAudio(peerName, stream);
+				}
+			});
+		};
+
+		//this.serverManager.ui.add
+		this.peerConnections[peerName] = pc;
+		return pc;
+	}
+	
+	async createOffer(to) {
+        let pc = this.peerConnections[to];
+        if (!pc) {
+            pc = this.createPeerConnection(to);
+            if (!pc) {
+                this.log("Невозможно создать RTCPeerConnection, нет TURN credentials.");
+                return;
+            }
+        }
+        const offer = await pc.createOffer();
+
+        await pc.setLocalDescription(offer);
+        this.safeSend({ type: "offer", sdp: offer.sdp, to, from: this.name, room: this.serverManager.getActiveMediaChannel() });
+        this.log(`Offer отправлен ${to}`);
+    }
+
+    async handleOffer(from, sdp, channel) {
+		if(channel!=="")
+		if(channel.id !== this.serverManager.getActiveMediaChannel().id)
+			return;
+        let pc = this.peerConnections[from];
+        if (!pc) {
+            pc = this.createPeerConnection(from);
+            if (!pc) {
+                this.log("Невозможно создать RTCPeerConnection, нет TURN credentials.");
+                return;
+            }
+        }
+        await pc.setRemoteDescription(new RTCSessionDescription({ type: "offer", sdp }));
+        const answer = await pc.createAnswer({ offerToReceiveAudio: true });
+        await pc.setLocalDescription(answer);
+        this.safeSend({ type: "answer", sdp: answer.sdp, to: from, from: this.name });
+        this.log(`Answer отправлен ${from}`);
+    }
+
+    attachAudio(peerName, stream) {
+
+		let user = this.serverManager.users.get(peerName);
+		if(user.localStream===null)
+			user.localStream = this.localStream;
+		else {
+			/*
+			let user = this.serverManager.users.get(peerName);
+			user.mediaStreamA = stream;
+			const streamPlayerA = new StreamPlayer();
+			streamPlayerA.openStream(user.mediaStreamA, peerName, "audio");
+			user.streamPlayerA = streamPlayerA;
+			*/
+			return;
+		}
+		console.log("dadada audi dadada");
+		
+        let container = document.getElementById(`audio-${peerName}-${stream.id}`);
+        if (!container) {
+            container = document.createElement("div");
+			user.audioContainer = container;
+            container.id = `audio-${peerName}`;
+            container.style.border = "1px solid #888";
+            container.style.margin = "5px";
+            container.style.padding = "5px";
+
+            const label = document.createElement("div");
+            label.textContent = `Пользователь: ${peerName}`;
+            container.appendChild(label);
+
+            const audio = document.createElement("audio");
+			user.audio = audio;
+            audio.id = `audioelem-${peerName}-${stream.id}`;
+            audio.autoplay = true;
+            audio.controls = true;
+            audio.muted = false;
+            audio.volume = 1.0;
+
+            audio.onloadedmetadata = () => {
+                audio.play().then(() => {
+                    this.log(`Аудио от ${peerName}-${stream.id} воспроизводится`);
+                }).catch(err => {
+                    console.warn("Ошибка воспроизведения:", err);
+                    this.log(`Ошибка воспроизведения: ${err.message}`);
+                });
+            };
+
+            container.appendChild(audio);
+            document.body.appendChild(container);
+        }
+        const audioElem = document.getElementById(`audioelem-${peerName}-${stream.id}`);
+        
+		
+		audioElem.srcObject = stream;
+    }
+
+	attachMedia(peerName, stream) {				
+		let user = this.serverManager.users.get(peerName);
+		user.mediaStream = stream;
+		const streamPlayer = new StreamPlayer();
+		streamPlayer.openStream(user.mediaStream, peerName, "video");
+		user.streamPlayer = streamPlayer;
+	}
+		
+	clearStream(stream) {
+		
+		return stream;
+
+	}
+	
+	muteUser(username){
+		let user = this.serverManager.users.get(username);
+		let pc = this.peerConnections[username];
+		let flag;
+		if(user.deaf!=="yes") {
+			user.deaf="yes";
+			console.log(user.deaf);
+			flag = false;
+		
+		} else {
+			user.deaf="no";
+			flag = true;
+			console.log(user.deaf);
+		}
+				
+
+			// Добавляем видео трек если есть
+			// Добавляем видео треки
+			// Получить все отправители и удалить их
+
+		pc.getSenders().forEach((sender, index) => {
+			if (index === 0) {
+				// Отключаем первый трек
+				if (sender.track && sender.track.readyState === 'live') {
+					sender.track.enabled = flag;
+					console.log("Первый трек отключен:", sender.track.kind);
+				}
+				return;
+			}
+		});
+	
+	}
+	
+	async processVideoMessage(peerName, stream, state) {
+        
+		/*
+		if(stream!==null){
+			this.safeSend({ type: "video", to: peerName , from: this.name, state: "answer", value: "no"});
+			return;
+		}
+		*/
+		if(state === "answer") {
+/*		
+			let pc = this.peerConnections[peerName];
+			pc.addTransceiver('video', {
+				direction: 'sendrecv',
+			}).receiver.track.addEventListener('unmute', () => {
+				console.log("video track activated");
+				const remoteStream = new MediaStream([this.getReceivers(pc, 'video')]);
+				this.attachMedia(peerName, remoteStream);
+			});
+
+			pc.addTransceiver('audio', {
+				direction: 'sendrecv', 
+			}).receiver.track.addEventListener('unmute', () => {
+				console.log("audio track activated");
+				const remoteStream = new MediaStream([this.getReceivers(pc, 'audio')]);
+				this.attachAudio(peerName, remoteStream);
+			});	
+*/		
+		}	
+		
+		if(state === "request") {
+
+			let pc = this.peerConnections[peerName];
+			if(this.localStream.id===stream.id)
+				return;
+			// Добавляем видео трек если есть
+			// Добавляем видео треки
+			try {
+				stream.getTracks().forEach(track => {
+					console.log("Добавление трека:", track.kind, track.id);
+					pc.addTrack(track, stream);
+				});
+			} catch (error) {
+				console.error("Ошибка при добавлении треков:", error);
+			}
+			let user;
+			if (this.serverManager.users.has(peerName)) {
+				user = this.serverManager.users.get(peerName);
+				
+				this.safeSend({ type: "video", to: peerName , from: this.name, state: "answer"});
+				this.createOffer(peerName);
+				this.senderName = peerName;
+			}
+
+		}
+		if(state === "disable") {
+
+			let pc = this.peerConnections[peerName];
+
+			// Добавляем видео трек если есть
+			// Добавляем видео треки
+			// Получить все отправители и удалить их
+			if(this.localStream.id===stream.id)
+				return;
+			let i = 0;
+			pc.getSenders().forEach(sender => {
+				if(i===0) { i++; return;}
+				pc.removeTrack(sender);
+				console.log("Трек удален из PeerConnection");
+			});
+
+			/*this.localStream.getTracks().forEach(track => {
+				console.log("localStream.getTracks().localStream.getTracks().localStream.getTracks().localStream.getTracks().");
+				pc.addTrack(track, this.localStream);
+			});*/
+
+
+			this.createOffer(peerName);
+
+
+		}	
+	}
+
+	requestVideo(peerName) {
+        
+        this.safeSend({ type: "video", to: peerName, from: this.name, state: "request" });
+	
+	}
+	
+	disableVideo(peerName) {
+        
+        this.safeSend({ type: "video", to: peerName, from: this.name, state: "disable" });
+	
+	}
+		
+    // Метод для закрытия конкретного peer соединения
+    closePeerConnection(peerName) {
+        if (this.peerConnections[peerName]) {
+            this.log(`Закрытие соединения с ${peerName}`);
+            
+            // Закрываем RTCPeerConnection
+            this.peerConnections[peerName].close();
+            delete this.peerConnections[peerName];
+			let user = this.serverManager.users.get(peerName);
+			user.localStream = null;
+            
+            // Удаляем из useTurnMap
+            delete this.useTurnMap[peerName];
+            
+            // Удаляем аудио элемент из DOM
+            this.removeAudioElement(peerName);
+            
+            this.log(`Соединение с ${peerName} закрыто`);
+        }
+    }
+
+    // Метод для закрытия всех peer соединений
+    closeAllPeerConnections() {
+        this.log(`Закрытие всех peer соединений (${Object.keys(this.peerConnections).length})`);
+        
+        for (const peerName in this.peerConnections) {
+            this.closePeerConnection(peerName);
+        }
+        
+        this.peerConnections = {};
+        this.useTurnMap = {};
+        
+        this.log("Все peer соединения закрыты");
+    }
+
+    // Метод для удаления аудио элемента из DOM
+    removeAudioElement(peerName) {
+        const container = document.getElementById(`audio-${peerName}`);
+        if (container) {
+            container.remove();
+            this.log(`Аудио элемент для ${peerName} удален`);
+        }
+        
+        const audioElem = document.getElementById(`audioelem-${peerName}`);
+        if (audioElem) {
+            // Останавливаем воспроизведение и очищаем srcObject
+            audioElem.pause();
+            audioElem.srcObject = null;
+        }
+    }
+
+    // Метод для выхода из комнаты
+    leaveRoom() {
+        this.log(`Выход из комнаты ${this.room}`);
+        
+        // Отправляем сообщение о выходе из комнаты
+        this.safeSend({ type: "join_room", room: this.room, name: this.name, from: this.name, server_id : ""});
+        
+        // Закрываем все peer соединения
+        this.closeAllPeerConnections();
+        
+        this.room = null;
+    }
+
+	safeSend_old(obj) {
+		const data = JSON.stringify(obj);
+		
+		if (this.socketReady) {
+			// Конвертируем строку в ArrayBuffer с UTF-8
+			const buffer = new TextEncoder().encode(data).buffer;
+			this.socket.send(buffer);
+		} else {
+			this.messageQueue.push(data);
+		}
+	}
+
+	safeSend(obj) {
+		const jsonString = JSON.stringify(obj);
+		
+		if (this.socketReady) {
+			try {
+				// Самый надежный способ гарантировать UTF-8
+				if (this.socket.binaryType === 'arraybuffer' && typeof TextEncoder !== 'undefined') {
+					const encoder = new TextEncoder();
+					const uint8Array = encoder.encode(jsonString);
+					this.socket.send(uint8Array);
+				} else {
+					// Явно указываем кодировку в Blob
+					const blob = new Blob([jsonString], { 
+						type: 'application/json; charset=utf-8' 
+					});
+					this.socket.send(blob);
+				}
+			} catch (error) {
+				console.error('Failed to send UTF-8 encoded message:', error);
+				// Fallback
+				this.socket.send(jsonString);
+			}
+		} else {
+			this.messageQueue.push(jsonString);
+		}
+	}
+
+    log(msg) {
+        console.log(msg);
+        const st = document.getElementById("status");
+        const t = new Date().toLocaleTimeString();
+        st.innerHTML += `<br>[${t}] ${msg}`;
+    }
+
+    // Выключить микрофон
+    muteMicrophone() {
+        if (!this.localStream) {
+            this.log("Нет локального потока");
+            return false;
+        }
+
+        const audioTracks = this.localStream.getAudioTracks();
+        if (audioTracks.length === 0) {
+            this.log("Нет аудио треков");
+            return false;
+        }
+
+        audioTracks[0].enabled = false;
+        this.log("Микрофон выключен");
+        return true;
+    }
+
+    // Включить микрофон
+    unmuteMicrophone() {
+        if (!this.localStream) {
+            this.log("Нет локального потока");
+            return false;
+        }
+
+        const audioTracks = this.localStream.getAudioTracks();
+        if (audioTracks.length === 0) {
+            this.log("Нет аудио треков");
+            return false;
+        }
+
+        audioTracks[0].enabled = true;
+        this.log("Микрофон включен");
+        return true;
+    }
+	
+	changeStateMicrophone() {
+		if (!this.localStream) {
+            this.log("Нет локального потока");
+            return false;
+        }
+
+        const audioTracks = this.localStream.getAudioTracks();
+        if (audioTracks.length === 0) {
+            this.log("Нет аудио треков");
+            return false;
+        }
+		
+		if(audioTracks[0].enabled === false) {
+			audioTracks[0].enabled = true;
+			this.log("Микрофон включен");
+		} else {
+			audioTracks[0].enabled = false;
+			this.log("Микрофон выключен"); // ИСПРАВЛЕНО: было "включен"
+		}
+		
+	}
+
+	changeStateSound() {
+		// Получаем все аудио элементы других пользователей
+		const audioElements = document.querySelectorAll('audio[id^="audioelem-"]');
+		
+		if (audioElements.length === 0) {
+			this.log("Нет аудио элементов для управления");
+			return false;
+		}
+
+		// Проверяем состояние по первому аудио элементу
+		//const firstAudio = audioElements[0];
+		const muted = this.muted;
+		if (muted === false) {
+			// Выключаем звук во всех аудио элементах
+			this.muted = true;
+			audioElements.forEach(audio => {
+				audio.muted = true;
+			});
+			this.log("Звук выключен");
+		} else {
+			// Включаем звук во всех аудио элементах
+			this.muted = false;
+			audioElements.forEach(audio => {
+				audio.muted = false;
+			});
+			this.log("Звук включен");
+		}
+		
+		return !muted;
+	}
+
+    // Метод для очистки ресурсов
+    destroy() {
+        this.log("Очистка ресурсов NetClient");
+        
+        // Выходим из комнаты если мы в ней
+        if (this.room) {
+            this.leaveRoom();
+        }
+        
+        // Закрываем все peer соединения
+        this.closeAllPeerConnections();
+        
+        // Закрываем WebSocket соединение
+        if (this.socket) {
+            this.socket.close();
+        }
+        
+        // Останавливаем локальный поток
+        if (this.localStream) {
+            this.localStream.getTracks().forEach(track => track.stop());
+            this.localStream = null;
+        }
+        
+        this.socketReady = false;
+        this.messageQueue = [];
+        
+        this.log("Все ресурсы NetClient очищены");
+    }
+}
+
+// ===== КЛАСС КАНАЛА =====
+class Channel {
+    constructor(id, name, type = 'text', participants = [], messages = []) {
+        this.id = id;
+        this.name = name;
+        this.type = type;
+        this.participants = participants;
+        this.messages = messages;
+        this.createdAt = new Date();
+        this.isActive = false;
+        this.opened = false;
+    }
+
+    addParticipant(userName) {
+        if (!this.participants.includes(userName)) {
+            this.participants.push(userName);
+            return true;
+        }
+        return false;
+    }
+
+    removeParticipant(userName) {
+        const index = this.participants.indexOf(userName);
+        if (index > -1) {
+            this.participants.splice(index, 1);
+            return true;
+        }
+        return false;
+    }
+
+    getParticipantCount() {
+        return this.participants.length;
+    }
+
+    addMessage(userName, text) {
+        const message = {
+            id: Date.now(),
+            user: userName,
+            text: text,
+            timestamp: new Date()
+        };
+        this.messages.push(message);
+        return message;
+    }
+
+    getRecentMessages(limit = 50) {
+        return this.messages.slice(-limit);
+    }
+
+    clearMessages() {
+        this.messages = [];
+    }
+
+    isMediaChannel() {
+        return this.type === 'audio' || this.type === 'video' || this.type === 'media';
+    }
+
+    isTextChannel() {
+        return this.type === 'text';
+    }
+
+    activate() {
+        this.isActive = true;
+    }
+
+    deactivate() {
+        this.isActive = false;
+    }
+
+    toggleOpened() {
+        this.opened = !this.opened;
+        return this.opened;
+    }
+
+    setOpened(state) {
+        this.opened = state;
+    }
+
+    toJSON() {
+        return {
+            id: this.id,
+            name: this.name,
+            type: this.type,
+            participants: this.participants,
+            messages: this.messages,
+            createdAt: this.createdAt,
+            isActive: this.isActive,
+            opened: this.opened
+        };
+    }
+
+    static fromJSON(data) {
+        const channel = new Channel(data.id, data.name, data.type, data.participants, data.messages);
+        channel.createdAt = new Date(data.createdAt);
+        channel.isActive = data.isActive || false;
+        channel.opened = data.opened || false;
+        return channel;
+    }
+}
+
+// ===== КЛАСС СЕРВЕРА =====
+class Server {
+    constructor(id, name, icon = '🌐', channels = []) {
+        this.id = id;
+        this.name = name;
+        this.icon = icon;
+        this.channels = channels;
+        this.members = [];
+        this.createdAt = new Date();
+        this.isActive = false;
+    }
+
+    addChannel(name, type = 'text') {
+        const channelId = `${this.id}-${Date.now()}`;
+        const channel = new Channel(channelId, name, type);
+        this.channels.push(channel);
+        return channel;
+    }
+    addChannel(channelId, name, type = 'text') {
+        const channel = new Channel(channelId, name, type);
+        this.channels.push(channel);
+        return channel;
+    }	
+
+    removeChannel(channelId) {
+        const index = this.channels.findIndex(channel => channel.id === channelId);
+        if (index > -1) {
+            this.channels.splice(index, 1);
+            return true;
+        }
+        return false;
+    }
+
+    getChannelById(channelId) {
+        return this.channels.find(channel => channel.id === channelId);
+    }
+
+    getChannelByName(channelName) {
+        return this.channels.find(channel => channel.name === channelName);
+    }
+
+    getTextChannels() {
+        return this.channels.filter(channel => channel.isTextChannel());
+    }
+
+    getMediaChannels() {
+        return this.channels.filter(channel => channel.isMediaChannel());
+    }
+
+    addMember(userName) {
+        if (!this.members.includes(userName)) {
+            this.members.push(userName);
+            return true;
+        }
+        return false;
+    }
+
+    removeMember(userName) {
+        const index = this.members.indexOf(userName);
+        if (index > -1) {
+            this.members.splice(index, 1);
+            
+            this.channels.forEach(channel => {
+                channel.removeParticipant(userName);
+            });
+            
+            return true;
+        }
+        return false;
+    }
+
+    getMemberCount() {
+        return this.members.length;
+    }
+
+    moveUserToChannel(userName, fromChannelId, toChannelId) {
+        const fromChannel = this.getChannelById(fromChannelId);
+        const toChannel = this.getChannelById(toChannelId);
+        
+        if (fromChannel) {
+            fromChannel.removeParticipant(userName);
+        }
+        
+        if (toChannel) {
+            toChannel.addParticipant(userName);
+            return true;
+        }
+        
+        return false;
+    }
+
+    activate() {
+        this.isActive = true;
+    }
+
+    deactivate() {
+        this.isActive = false;
+        this.channels.forEach(channel => channel.deactivate());
+    }
+
+    hasActiveMediaChannels() {
+        return this.channels.some(channel => channel.isMediaChannel() && channel.isActive);
+    }
+
+    getStats() {
+        return {
+            totalChannels: this.channels.length,
+            textChannels: this.getTextChannels().length,
+            mediaChannels: this.getMediaChannels().length,
+            totalMembers: this.members.length,
+            activeMediaChannels: this.channels.filter(ch => ch.isMediaChannel() && ch.isActive).length
+        };
+    }
+
+    toJSON() {
+        return {
+            id: this.id,
+            name: this.name,
+            icon: this.icon,
+            channels: this.channels.map(channel => channel.toJSON()),
+            members: this.members,
+            createdAt: this.createdAt,
+            isActive: this.isActive
+        };
+    }
+
+    static fromJSON(data) {
+        const server = new Server(data.id, data.name, data.icon);
+        server.channels = data.channels.map(channelData => Channel.fromJSON(channelData));
+        server.members = data.members || [];
+        server.createdAt = new Date(data.createdAt);
+        server.isActive = data.isActive || false;
+        return server;
+    }
+}
+
+// ===== КЛАСС МЕНЕДЖЕРА СЕРВЕРОВ =====
+class ServerManager {
+    constructor() {
+        this.servers = [];
+        this.currentServer = null;
+        this.currentChannel = null;
+        this.eventHandlers = new Map();
+        this.serverStates = new Map();
+        this.activeMediaChannel = null;
+        this.currentUserName = null;
+		this.ui = null;
+		this.users = new Map();
+    }
+
+    setCurrentUserName(userName, password) {
+        this.currentUserName = userName;
+		this.NetClient = new NetClient (this.currentUserName, this);
+		let pass = password;
+		this.NetClient.safeSend({ type: "register", name: this.currentUserName, password: pass });
+		//this.NetClient.setServerManager(this);
+    }
+	
+	getCurrentUserName() {
+		return this.currentUserName;
+	}
+
+    setActiveMediaChannel(channel) {
+		console.log("setActiveMediaChannel");
+        // Если уже есть активный медиа-канал - выходим из него
+        if (this.activeMediaChannel && this.activeMediaChannel.id !== channel.id) {
+            const activeServer = this.servers.find(s => s.id === this.activeMediaChannel.serverId);
+            if (activeServer) {
+                const activeChannel = activeServer.getChannelById(this.activeMediaChannel.id);
+                if (activeChannel) {
+                    activeChannel.removeParticipant(this.activeMediaChannel.userName);
+					this.NetClient.leaveRoom();
+                    this.emit('userLeftChannel', { 
+                        server: activeServer, 
+                        channel: activeChannel, 
+                        userName: this.activeMediaChannel.userName 
+                    });
+					
+                }
+            }
+        }
+        
+        this.activeMediaChannel = channel ? {
+            id: channel.id,
+            serverId: this.currentServer.id,
+            userName: this.currentUserName
+        } : null;
+		console.log("this.NetClient.connectRoom"+channel.id);
+		this.NetClient.connectRoom(channel.id, this.currentServer.id);
+    }
+
+    getActiveMediaChannel() {
+        return this.activeMediaChannel;
+    }
+
+	setui(ui) {
+		this.ui = ui;
+	}
+
+    clearActiveMediaChannel() {
+        if (this.activeMediaChannel) {
+            const activeServer = this.servers.find(s => s.id === this.activeMediaChannel.serverId);
+            if (activeServer) {
+                const activeChannel = activeServer.getChannelById(this.activeMediaChannel.id);
+                if (activeChannel) {
+                    activeChannel.removeParticipant(this.activeMediaChannel.userName);
+                    this.emit('userLeftChannel', { 
+                        server: activeServer, 
+                        channel: activeChannel, 
+                        userName: this.activeMediaChannel.userName 
+                    });
+                }
+            }
+            this.activeMediaChannel = null;
+        }
+    }
+
+    initialize(initialServers = []) {
+        this.servers = initialServers.map(serverData => Server.fromJSON(serverData));
+        
+        if (this.servers.length > 0) {
+            this.currentServer = this.servers[0];
+            if (this.currentServer.channels.length > 0) {
+                this.currentChannel = this.currentServer.channels[0];
+            }
+        }
+        
+        this.emit('initialized', { servers: this.servers });
+    }
+
+    saveServerState(serverId, channelId) {
+        this.serverStates.set(serverId, channelId);
+    }
+
+    getServerState(serverId) {
+        return this.serverStates.get(serverId);
+    }
+
+    createServer(serverId, name, icon = '🌐') {
+        //const serverId = `${Date.now()}`;
+        const server = new Server(serverId, name, icon);
+        this.servers.push(server);
+        
+        //server.addChannel('общий', 'text');
+        //server.addChannel('голосовой', 'audio');
+        
+        this.emit('serverCreated', { server });
+        return server;
+    }
+
+    removeServer(serverId) {
+        const index = this.servers.findIndex(server => server.id === serverId);
+        if (index > -1) {
+            const removedServer = this.servers.splice(index, 1)[0];
+            
+            this.serverStates.delete(serverId);
+            
+            if (this.currentServer && this.currentServer.id === serverId) {
+                this.currentServer = this.servers.length > 0 ? this.servers[0] : null;
+                this.currentChannel = this.currentServer ? this.currentServer.channels[0] : null;
+            }
+            
+            this.emit('serverRemoved', { server: removedServer });
+            return true;
+        }
+        return false;
+    }
+
+    switchToServer(serverId) {
+        const server = this.servers.find(s => s.id === serverId);
+        if (server) {
+            const previousServer = this.currentServer;
+            this.currentServer = server;
+            
+            const savedChannelId = this.getServerState(serverId);
+            if (savedChannelId) {
+                this.currentChannel = server.getChannelById(savedChannelId);
+            }
+            if (!this.currentChannel && server.channels.length > 0) {
+                this.currentChannel = server.channels[0];
+            }
+            
+            this.emit('serverSwitched', { 
+                previousServer, 
+                currentServer: this.currentServer,
+                currentChannel: this.currentChannel
+            });
+            
+            return true;
+        }
+        return false;
+    }
+
+    createChannelInCurrentServer(name, type = 'text') {
+        if (!this.currentServer) {
+            throw new Error('No current server selected');
+        }
+        
+        const channel = this.currentServer.addChannel(name, type);
+        this.emit('channelCreated', { server: this.currentServer, channel });
+        return channel;
+    }
+	createChannelInServer(Server, name, type = 'text') {
+        if (!Server) {
+            throw new Error('No server ');
+        }
+        
+        const channel = Server.addChannel(name, type);
+        this.emit('channelCreated', { server: Server, channel });
+        return channel;
+    }
+
+    removeChannelFromCurrentServer(channelId) {
+        if (!this.currentServer) {
+            return false;
+        }
+        
+        const success = this.currentServer.removeChannel(channelId);
+        
+        if (success && this.currentChannel && this.currentChannel.id === channelId) {
+            this.currentChannel = this.currentServer.channels.length > 0 ? this.currentServer.channels[0] : null;
+        }
+        
+        if (success) {
+            this.emit('channelRemoved', { server: this.currentServer, channelId });
+        }
+        
+        return success;
+    }
+
+    switchToChannel(channelId) {
+        if (!this.currentServer) {
+            return false;
+        }
+        console.log("switchToChannel(channelId) {");
+        const channel = this.currentServer.getChannelById(channelId);
+        if (channel) {
+            const previousChannel = this.currentChannel;
+            this.currentChannel = channel;
+            
+            this.saveServerState(this.currentServer.id, channelId);
+            
+            this.emit('channelSwitched', { 
+                previousChannel, 
+                currentChannel: this.currentChannel,
+                server: this.currentServer
+            });
+            
+            return true;
+        }
+        return false;
+    }
+
+    addUserToServer(serverId, userName) {
+        const server = this.servers.find(s => s.id === serverId);
+        if (server) {
+            const success = server.addMember(userName);
+            if (success) {
+				console.log("userJoinedServer");
+                this.emit('userJoinedServer', { server, userName });
+            }
+            return success;
+        }
+        return false;
+    }
+
+    addUserToChannel(serverId, channelId, userName, active) {
+		
+		// Создаем или получаем пользователя
+		console.log(serverId + " " + channelId + " " + userName);
+        let user;
+        if (this.users.has(userName)) {
+            user = this.users.get(userName);
+			if(user.getServer_id() === serverId && user.getChannel_id() === channelId)
+				return;
+        } else {
+            user = new User(userName);
+            this.users.set(userName, user);
+        }
+		console.log(user.getChannel_id());
+		if(user.getChannel_id() !== null) {
+			if(channelId !== user.getChannel_id() ) {
+				this.removeUserFromChannel(user.getServer_id(), user.getChannel_id(), userName);
+			}
+			if(channelId === "" && user.getChannel_id() !== "") {
+				this.removeUserFromChannel(serverId, channelId, userName);
+			}
+		}		
+		
+        // Обновляем данные пользователя
+        user.setServer_id(serverId);
+        user.setChannel_id(channelId);
+        user.setActive(active);	
+
+		
+        const server = this.servers.find(s => s.id === serverId);
+        if (server) {
+            const channel = server.getChannelById(channelId);
+            if (channel) {
+                const success = channel.addParticipant(userName);
+                if (success) {
+                    this.emit('userJoinedChannel', { server, channel, userName });
+                }
+                return success;
+            }
+        }
+        return false;
+    }
+
+    removeUserFromChannel(serverId, channelId, userName) {
+        const server = this.servers.find(s => s.id === serverId);
+        if (server) {
+            const channel = server.getChannelById(channelId);
+            if (channel) {
+                const success = channel.removeParticipant(userName);
+                if (success) {
+                    this.emit('userLeftChannel', { server, channel, userName });
+                }
+                return success;
+            }
+        }
+        return false;
+    }
+
+	clearUsers() {
+		for (const entry of this.users.entries()) {
+			const [key, value] = entry;
+			
+			this.addUserToChannel("", "", key, 0);	
+			
+			console.log(`Ключ: ${key}, Значение:`, value);
+		}
+		this.setActiveMediaChannel("");
+	}
+
+    sendMessageToCurrentChannel(userName, text) {
+        if (!this.currentChannel || !this.currentChannel.isTextChannel()) {
+            return null;
+        }
+        
+        const message = this.currentChannel.addMessage(userName, text);
+        this.emit('messageSent', { 
+            server: this.currentServer, 
+            channel: this.currentChannel, 
+            message 
+        });
+        
+        return message;
+    }
+	
+	sendMessageToChannel(userName, text) {
+        if (!this.currentChannel) {
+            return null;
+        }
+        
+        const message = this.currentChannel.addMessage(userName, text);
+        this.emit('messageSent', { 
+            server: this.currentServer, 
+            channel: this.currentChannel, 
+            message 
+        });
+        
+        return message;
+    }
+
+    updateUserIcon(userName, icon, title = '') {
+        // Находим все элементы участников
+		console.log(userName, icon, title);
+        const participantElements = document.querySelectorAll('.participant-item');
+        let found = false;
+		let user;
+		user = this.users.get(userName);
+		/*if (this.serverManager.users.has(key)) {
+		} else {
+		user = new User(key);
+		this.serverManager.users.set(key, user);
+		}*/
+		//if(clientData.shared_video==="true")
+		
+		if(title!=="")
+			user.setIcon_video_streaming_on();
+		else
+			user.setIcon_video_streaming_off();
+
+        participantElements.forEach(element => {
+            const usernameAttr = element.getAttribute('data-username');
+            if (usernameAttr === userName) {
+                const userIcon = element.querySelector('.user-icon');
+                if (userIcon) {
+                    userIcon.textContent = icon;
+                    if (title) {
+                        userIcon.title = title;
+                    }
+                    found = true;
+                }
+            }
+        });
+
+        return found;
+    }
+
+	getAllStats() {
+        return this.servers.map(server => ({
+            server: server.name,
+            ...server.getStats()
+        }));
+    }
+
+    saveState() {
+        const state = {
+            servers: this.servers.map(server => server.toJSON()),
+            currentServerId: this.currentServer ? this.currentServer.id : null,
+            currentChannelId: this.currentChannel ? this.currentChannel.id : null,
+            serverStates: Array.from(this.serverStates.entries())
+        };
+        
+        localStorage.setItem('serverManagerState', JSON.stringify(state));
+        return state;
+    }
+
+    loadState() {
+        try {
+            const savedState = localStorage.getItem('serverManagerState');
+            if (savedState) {
+                const state = JSON.parse(savedState);
+                
+                this.servers = state.servers.map(serverData => Server.fromJSON(serverData));
+                
+                if (state.serverStates) {
+                    this.serverStates = new Map(state.serverStates);
+                }
+                
+                if (state.currentServerId) {
+                    this.currentServer = this.servers.find(s => s.id === state.currentServerId);
+                }
+                
+                if (this.currentServer && state.currentChannelId) {
+                    this.currentChannel = this.currentServer.getChannelById(state.currentChannelId);
+                }
+                
+                this.emit('stateLoaded', { state: this });
+                return true;
+            }
+        } catch (error) {
+            console.error('Error loading server manager state:', error);
+        }
+        return false;
+    }
+
+    on(event, handler) {
+        if (!this.eventHandlers.has(event)) {
+            this.eventHandlers.set(event, []);
+        }
+        this.eventHandlers.get(event).push(handler);
+    }
+
+    off(event, handler) {
+        if (this.eventHandlers.has(event)) {
+            const handlers = this.eventHandlers.get(event);
+            const index = handlers.indexOf(handler);
+            if (index > -1) {
+                handlers.splice(index, 1);
+            }
+        }
+    }
+
+    emit(event, data) {
+        if (this.eventHandlers.has(event)) {
+            this.eventHandlers.get(event).forEach(handler => {
+                try {
+                    handler(data);
+                } catch (error) {
+                    console.error(`Error in event handler for ${event}:`, error);
+                }
+            });
+        }
+    }
+
+    getAllServers() {
+        return [...this.servers];
+    }
+
+    getCurrentServer() {
+        return this.currentServer;
+    }
+
+    getCurrentChannel() {
+        return this.currentChannel;
+    }
+}
+
+// ===== UI HELPER КЛАСС =====
+class UIHelper {
+    constructor(elements, serverManager) {
+        this.elements = elements;
+        this.serverManager = serverManager;
+		this.serverManager.setui(this);
+        this.state = {
+            currentUserName: "User" + Math.floor(Math.random() * 1000),
+            isMediaControlsVisible: false,
+            isMicMuted: false,
+            isSoundMuted: false
+        };
+        
+        this.callbacks = {
+            onServerSwitch: null,
+            onChannelSwitch: null,
+            onAddChannel: null,
+            onAddServer: null,
+            onLogin: null,
+            onRegister: null,
+            onMediaControl: null
+        };
+    }
+
+    init() {
+        this.setupEventListeners();
+        this.showLoginModal();
+    }
+
+    setupEventListeners() {
+        document.getElementById('showRegister').addEventListener('click', () => this.showRegisterModal());
+        document.getElementById('backToLogin').addEventListener('click', () => this.showLoginModal());
+        this.elements.loginForm.addEventListener('submit', (e) => this.handleLogin(e));
+        this.elements.registerForm.addEventListener('submit', (e) => this.handleRegister(e));
+        
+        this.elements.addChannelBtn.addEventListener('click', () => this.showAddChannelModal());
+        document.getElementById('cancelAddChannel').addEventListener('click', () => this.hideAddChannelModal());
+        this.elements.addChannelForm.addEventListener('submit', (e) => this.handleAddChannel(e));
+        
+        this.elements.addServerBtn.addEventListener('click', () => this.showAddServerModal());
+        document.getElementById('cancelAddServer').addEventListener('click', () => this.hideAddServerModal());
+        this.elements.addServerForm.addEventListener('submit', (e) => this.handleAddServer(e));
+        
+        this.elements.enableCameraBtn.addEventListener('click', () => {
+		this.serverManager.NetClient.captureCamera();});
+        this.elements.enableScreenBtn.addEventListener('click', () => {
+		this.serverManager.NetClient.captureScreenWithSystemAudio(false);});
+		this.elements.enableScreenBtn.addEventListener('contextmenu', (event) => {
+			event.preventDefault(); // Блокируем стандартное контекстное меню
+			this.serverManager.NetClient.captureScreenWithSystemAudio(true);
+		});
+
+		
+        //this.elements.disableVideoBtn.addEventListener('click', () => this.triggerMediaControl('disableVideo'));
+        this.elements.disableVideoBtn.addEventListener('click', () => {
+		this.serverManager.NetClient.stopMediaStream();});
+		
+        this.elements.muteMicBtn.addEventListener('click', () => this.triggerMediaControl('toggleMicrophone'));
+        this.elements.muteSoundBtn.addEventListener('click', () => this.triggerMediaControl('toggleSound'));
+        
+        document.querySelector('.chat-input input').addEventListener('keydown', (e) => this.handleChatInput(e));
+        
+        document.addEventListener('keydown', (e) => this.handleGlobalKeys(e));
+    }
+
+    onServerSwitch(callback) {
+        this.callbacks.onServerSwitch = callback;
+    }
+
+    onChannelSwitch(callback) {
+        this.callbacks.onChannelSwitch = callback;
+    }
+
+    onAddChannel(callback) {
+        this.callbacks.onAddChannel = callback;
+    }
+
+    onAddServer(callback) {
+        this.callbacks.onAddServer = callback;
+    }
+
+    onLogin(callback) {
+        this.callbacks.onLogin = callback;
+    }
+
+    onRegister(callback) {
+        this.callbacks.onRegister = callback;
+    }
+
+    onMediaControl(callback) {
+        this.callbacks.onMediaControl = callback;
+    }
+
+    renderServers() {
+        this.elements.serverList.innerHTML = '';
+        
+        this.serverManager.getAllServers().forEach(server => {
+            const serverEl = document.createElement('div');
+            serverEl.classList.add('server');
+            serverEl.textContent = server.icon;
+            serverEl.title = server.name;
+			serverEl.style.flexShrink = '0';
+
+
+            if (server.id === this.serverManager.getCurrentServer().id) {
+                serverEl.style.border = '2px solid #5865f2';
+            }
+
+            serverEl.addEventListener('click', () => {
+                if (this.callbacks.onServerSwitch) {
+                    this.callbacks.onServerSwitch(server);
+                }
+            });
+            this.elements.serverList.appendChild(serverEl);
+        });
+    }
+
+    loadServerContent(server) {
+        this.clearChannelsLists();
+        
+        server.channels.forEach(channel => {
+            const channelEl = this.createChannelElement(channel);
+            
+            if (channel.type === 'text') {
+                this.elements.textChannelsList.appendChild(channelEl);
+            } else {
+                this.elements.avChannelsList.appendChild(channelEl);
+            }
+        });
+
+        this.updateChatHeader();
+        this.loadMessages(this.serverManager.getCurrentChannel());
+    }
+
+    createChannelElement(channel) {
+        const li = document.createElement('li');
+        li.style.flexDirection = 'column';
+        li.style.alignItems = 'stretch';
+
+        const topRow = document.createElement('div');
+        topRow.classList.add('channel-info');
+        topRow.textContent = `# ${channel.name}`;
+
+        const currentChannel = this.serverManager.getCurrentChannel();
+        if (currentChannel && currentChannel.id === channel.id) {
+            li.style.backgroundColor = '#404249';
+        }
+
+        li.appendChild(topRow);
+
+        if (channel.isMediaChannel()) {
+            this.addMediaChannelElements(topRow, channel);
+        }
+
+        li.addEventListener('click', () => {
+            if (this.callbacks.onChannelSwitch) {
+                this.callbacks.onChannelSwitch(channel);
+            }
+        });
+        return li;
+    }
+
+    addMediaChannelElements(topRow, channel) {
+        const voiceIndicator = document.createElement('span');
+        voiceIndicator.textContent = ' 🔊';
+        voiceIndicator.style.fontSize = '12px';
+        voiceIndicator.style.color = '#5865f2';
+        topRow.appendChild(voiceIndicator);
+        
+        const arrowBtn = document.createElement('button');
+        arrowBtn.classList.add('toggle-participants');
+        arrowBtn.innerHTML = '&#x25BC;';
+        topRow.appendChild(arrowBtn);
+
+        const participantsList = document.createElement('ul');
+        participantsList.classList.add('participants-list');
+
+        channel.participants.forEach(participant => {
+            const pItem = this.createParticipantElement(participant, channel);
+            participantsList.appendChild(pItem);
+        });
+
+        if (channel.opened) {
+            participantsList.classList.add('show');
+            arrowBtn.classList.add('open');
+        }
+
+        arrowBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = participantsList.classList.toggle('show');
+            arrowBtn.classList.toggle('open', isOpen);
+            channel.setOpened(isOpen);
+        });
+
+        topRow.parentElement.appendChild(participantsList);
+    }
+
+    // Новый метод для создания элемента участника с обработчиками
+	createParticipantElement(participantName, channel) {
+		const pItem = document.createElement('li');
+		pItem.classList.add('participant-item');
+		pItem.setAttribute('data-username', participantName);
+		
+		// Создаем контейнер для имени пользователя и иконки
+		const userContainer = document.createElement('div');
+		userContainer.style.cssText = `
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			width: 100%;
+		`;
+		
+		// Имя пользователя
+		const userNameSpan = document.createElement('span');
+		userNameSpan.textContent = participantName;
+		userNameSpan.style.flex = '1';
+		
+		// Иконка справа
+		const userIcon = document.createElement('span');
+		console.log(participantName);
+		let user;
+        if (this.serverManager.users.has(participantName)) {
+            user = this.serverManager.users.get(participantName);
+        } else {
+            user = new User(participantName);
+            this.serverManager.users.set(participantName, user);
+        }
+		user = this.serverManager.users.get(participantName);
+		
+		userIcon.classList.add('user-icon');
+		userIcon.style.cssText = `
+			font-size: 12px;
+			margin-left: 8px;
+			opacity: 0.7;
+			transition: opacity 0.2s ease;
+		`;
+		
+
+		// Определяем иконку в зависимости от типа канала и статуса пользователя
+		if (channel.isMediaChannel()) {
+			// Для медиа-каналов показываем иконку микрофона/наушников
+			//userIcon.textContent = '🎤'; // или '🔊' для слушающих
+			//userIcon.textContent = '📹';
+			//userIcon.title = 'Стримит';
+			if(user.getIcon_video_streaming()!== null) {
+				userIcon.textContent = user.getIcon_video_streaming().textContent;
+				userIcon.title = user.getIcon_video_streaming().title;
+			}
+			//
+			//userIcon = user.getIcon_video_streaming();
+			//userIcon.textContent = '';
+			//userIcon.title = '';
+		} else {
+			// Для текстовых каналов показываем статус онлайн
+			userIcon.textContent = '🟢';
+			userIcon.title = 'В сети';
+		}
+		user.setIcon_video_streaming(userIcon);
+		console.log(user.getIcon_video_streaming().textContent);
+		console.log(user.getIcon_video_streaming().title);
+
+		// Собираем элементы
+		userContainer.appendChild(userNameSpan);
+		userContainer.appendChild(userIcon);
+		pItem.appendChild(userContainer);
+		
+		// Добавляем контекстное меню
+		pItem.addEventListener('contextmenu', (e) => {
+			e.preventDefault();
+			this.showParticipantContextMenu(e, participantName, channel);
+		});
+		
+		return pItem;
+	}
+
+    // Обработчик левой кнопки мыши
+    handleParticipantLeftClick(event, participantName, channel) {
+        const actions = [
+            {
+                name: '📝 Написать сообщение',
+                action: () => this.openPrivateChat(participantName)
+            },
+            {
+                name: '👥 Позвать в канал',
+                action: () => this.inviteToCurrentChannel(participantName)
+            },
+            {
+                name: '👤 Показать профиль',
+                action: () => this.showUserProfile(participantName)
+            }
+        ];
+        
+        // Показываем меню быстрых действий
+        this.showQuickActionsMenu(event, participantName, actions);
+    }
+
+    // Обработчик правой кнопки мыши (контекстное меню)
+    showParticipantContextMenu(event, participantName, channel) {
+        // Удаляем существующее контекстное меню
+        this.removeExistingContextMenu();
+        
+        const contextMenu = document.createElement('div');
+        contextMenu.classList.add('context-menu');
+        contextMenu.style.cssText = `
+            position: fixed;
+            left: ${event.clientX}px;
+            top: ${event.clientY}px;
+            background: #2f3136;
+            border: 1px solid #40444b;
+            border-radius: 4px;
+            padding: 5px 0;
+            min-width: 180px;
+            z-index: 10000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        `;
+
+        const menuItems = [
+            {
+                text: '📝 Написать сообщение',
+                action: () => this.openPrivateChat(participantName)
+            },
+            {
+                text: '👥 Позвать в текущий канал',
+                action: () => this.inviteToCurrentChannel(participantName)
+            },
+            {
+                text: '👤 Показать профиль',
+                action: () => this.showUserProfile(participantName)
+            },
+            { type: 'separator' },
+            {
+                text: '🎤 Заглушить',
+                action: () => this.deafenUser(participantName, channel)
+            },
+			{
+                text: '📹 смотреть стрим',
+                action: () => this.watchStream(participantName, channel)
+            },
+            {
+                text: '🔇 Отключить звук',
+                action: () => this.muteUser(participantName, channel)
+            },
+            { type: 'separator' },
+            {
+                text: '🚪 Выгнать из канала',
+                action: () => this.kickFromChannel(participantName, channel),
+                dangerous: true
+            },
+            {
+                text: '❌ Забанить',
+                action: () => this.banUser(participantName, channel),
+                dangerous: true
+            }
+        ];
+        
+        menuItems.forEach(item => {
+            if (item.type === 'separator') {
+                const separator = document.createElement('hr');
+                separator.style.cssText = 'border: none; border-top: 1px solid #40444b; margin: 5px 0;';
+                contextMenu.appendChild(separator);
+            } else {
+                const menuItem = document.createElement('div');
+                menuItem.textContent = item.text;
+                menuItem.style.cssText = `
+                    padding: 8px 12px;
+                    cursor: pointer;
+                    color: ${item.dangerous ? '#ed4245' : '#b9bbbe'};
+                    font-size: 14px;
+                    transition: background-color 0.2s;
+                `;
+                
+                menuItem.addEventListener('mouseenter', () => {
+                    menuItem.style.backgroundColor = '#393c43';
+                });
+                
+                menuItem.addEventListener('mouseleave', () => {
+                    menuItem.style.backgroundColor = 'transparent';
+                });
+                
+                menuItem.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    item.action();
+                    this.removeExistingContextMenu();
+                });
+                
+                contextMenu.appendChild(menuItem);
+            }
+        });
+        
+        document.body.appendChild(contextMenu);
+        
+        // Закрываем меню при клике вне его
+        const closeMenu = (e) => {
+            if (!contextMenu.contains(e.target)) {
+                this.removeExistingContextMenu();
+                document.removeEventListener('click', closeMenu);
+            }
+        };
+        
+        setTimeout(() => {
+            document.addEventListener('click', closeMenu);
+        }, 100);
+    }
+
+    // Метод для быстрого меню действий (по ЛКМ)
+    showQuickActionsMenu(event, participantName, actions) {
+        this.removeExistingContextMenu();
+        
+        const quickMenu = document.createElement('div');
+        quickMenu.classList.add('quick-actions-menu');
+        quickMenu.style.cssText = `
+            position: fixed;
+            background: #2f3136;
+            border: 1px solid #40444b;
+            border-radius: 4px;
+            padding: 5px 0;
+            min-width: 200px;
+            z-index: 10000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        `;
+        
+        const header = document.createElement('div');
+        header.textContent = `Действия с ${participantName}`;
+        header.style.cssText = `
+            padding: 8px 12px;
+            color: white;
+            font-weight: bold;
+            border-bottom: 1px solid #40444b;
+            font-size: 14px;
+        `;
+        quickMenu.appendChild(header);
+        
+        actions.forEach(action => {
+            const menuItem = document.createElement('div');
+            menuItem.textContent = action.name;
+            menuItem.style.cssText = `
+                padding: 8px 12px;
+                cursor: pointer;
+                color: #b9bbbe;
+                font-size: 14px;
+                transition: background-color 0.2s;
+            `;
+            
+            menuItem.addEventListener('mouseenter', () => {
+                menuItem.style.backgroundColor = '#393c43';
+            });
+            
+            menuItem.addEventListener('mouseleave', () => {
+                menuItem.style.backgroundColor = 'transparent';
+            });
+            
+            menuItem.addEventListener('click', (e) => {
+                e.stopPropagation();
+                action.action();
+                this.removeExistingContextMenu();
+            });
+            
+            quickMenu.appendChild(menuItem);
+        });
+        
+        // Позиционируем меню рядом с курсором
+        const rect = event.target.getBoundingClientRect();
+        quickMenu.style.left = (rect.left + rect.width + 5) + 'px';
+        quickMenu.style.top = rect.top + 'px';
+        
+        document.body.appendChild(quickMenu);
+        
+        // Автозакрытие через 3 секунды
+        setTimeout(() => {
+            this.removeExistingContextMenu();
+        }, 3000);
+    }
+
+    // Утилита для удаления существующих меню
+    removeExistingContextMenu() {
+        document.querySelectorAll('.context-menu, .quick-actions-menu').forEach(menu => {
+            menu.remove();
+        });
+    }
+
+    // Реализации действий
+    openPrivateChat(participantName) {
+        this.addMessageToChat('Система', `Открыт приватный чат с ${participantName}`);
+        console.log(`Открыть приватный чат с ${participantName}`);
+    }
+
+    inviteToCurrentChannel(participantName) {
+        const currentChannel = this.serverManager.getCurrentChannel();
+        if (currentChannel) {
+            this.addMessageToChat('Система', `Приглашение отправлено ${participantName} в канал ${currentChannel.name}`);
+            console.log(`Пригласить ${participantName} в канал ${currentChannel.name}`);
+        }
+    }
+
+    showUserProfile(participantName) {
+        this.addMessageToChat('Система', `Показан профиль пользователя ${participantName}`);
+        console.log(`Показать профиль ${participantName}`);
+    }
+
+    muteUser(participantName, channel) {
+	
+		console.log('Аудиодорожек не найдено'+participantName);
+		let CurrentUserName = this.serverManager.getCurrentUserName();
+		console.log('Аудиодорожек  найдено'+participantName);		
+		if(CurrentUserName ===  participantName)
+			return;
+		console.log('Аудиодорожек  найдено'+participantName);		
+		let user = this.serverManager.users.get(participantName);
+		if(user.deaf!=="yes") {
+			user.deaf = "yes";			
+			user.audio.muted = true;			
+		}
+		else { 
+			user.deaf = "no";  
+			user.audio.muted = false;		
+		}
+        this.addMessageToChat('Система', `Пользователь ${participantName} заглушен в канале ${channel.name}`);
+        console.log(`Заглушить ${participantName} в канале ${channel.name}`);
+    }
+
+    watchStream(participantName, channel) {
+        this.addMessageToChat('Система', `Подключение к пользователю ${participantName} в канале ${channel.name}`);
+		/*let user = this.serverManager.users.get(participantName);
+		if(user.mediaStream!==null)
+			openStreamModal(user.mediaStream, participantName, "video");
+		else*/
+		this.serverManager.NetClient.requestVideo(participantName);
+		
+		console.log(`Смотреть стрим ${participantName} в канале ${channel.name}`);
+    }
+
+    deafenUser(participantName, channel) {
+
+		this.serverManager.NetClient.muteUser(participantName);
+
+		
+        this.addMessageToChat('Система', `Пользователю ${participantName} отключен звук в канале ${channel.name}`);
+        console.log(`Отключить звук ${participantName} в канале ${channel.name}`);
+    }
+
+    kickFromChannel(participantName, channel) {
+        if (confirm(`Выгнать ${participantName} из канала ${channel.name}?`)) {
+            this.serverManager.removeUserFromChannel(
+                this.serverManager.getCurrentServer().id,
+                channel.id,
+                participantName
+            );
+            this.addMessageToChat('Система', `Пользователь ${participantName} выгнан из канала`);
+        }
+    }
+
+    banUser(participantName, channel) {
+        if (confirm(`Забанить ${participantName} в канале ${channel.name}?`)) {
+            this.addMessageToChat('Система', `Пользователь ${participantName} забанен в канале`);
+            console.log(`Забанить ${participantName} в канале ${channel.name}`);
+        }
+    }
+
+    refreshParticipantsList(channelName) {
+        const server = this.serverManager.getCurrentServer();
+        const channel = server.getChannelByName(channelName);
+        if (!channel) return;
+        
+        const channelElements = document.querySelectorAll('.channels li');
+        
+        channelElements.forEach(li => {
+            const channelInfo = li.querySelector('.channel-info');
+            if (channelInfo && channelInfo.textContent.includes(`# ${channelName}`)) {
+                const participantsList = li.querySelector('.participants-list');
+                if (participantsList) {
+                    participantsList.innerHTML = '';
+                    channel.participants.forEach(participant => {
+                        const pItem = this.createParticipantElement(participant, channel);
+                        participantsList.appendChild(pItem);
+                    });
+                    
+                    if (channel.opened) {
+                        participantsList.classList.add('show');
+                        const arrowBtn = li.querySelector('.toggle-participants');
+                        if (arrowBtn) arrowBtn.classList.add('open');
+                    } else {
+                        participantsList.classList.remove('show');
+                        const arrowBtn = li.querySelector('.toggle-participants');
+                        if (arrowBtn) arrowBtn.classList.remove('open');
+                    }
+                }
+            }
+        });
+    }
+
+    updateChatHeader() {
+        const currentChannel = this.serverManager.getCurrentChannel();
+        if (currentChannel) {
+            this.elements.chatHeader.textContent = `# ${currentChannel.name}`;
+        } else {
+            this.elements.chatHeader.textContent = '# нет каналов';
+        }
+    }
+
+    loadMessages(channel) {
+        this.clearChatMessages();
+
+        if (!channel) {
+            this.showInfoMessage('Канал не выбран');
+            return;
+        }
+
+        if (channel.isMediaChannel()) {
+            this.showInfoMessage('Подключение к медиа-каналу...');
+            //return;
+        }
+
+        channel.getRecentMessages().forEach(msg => {
+            this.addMessageToChat(msg.user, msg.text);
+        });
+    }
+
+    addMessageToChat(user, text) {
+		const div = document.createElement('div');
+		div.classList.add('message');
+
+		const strong = document.createElement('strong');
+		strong.textContent = user + ': ';
+		const textNode = document.createTextNode(text);
+
+		div.appendChild(strong);
+		div.appendChild(textNode);
+		this.elements.chatMessages.appendChild(div);
+		this.scrollChatToBottom();
+    }
+
+    handleChatInput(e) {
+        if (e.key === 'Enter' && e.target.value.trim()) {
+            e.preventDefault();
+            const messageText = e.target.value.trim();
+			const channel = this.serverManager.currentChannel.id;
+			console.log(messageText, "  ", channel);
+            this.serverManager.NetClient.safeSend({ type: "message", messageText: messageText });
+            this.serverManager.sendMessageToChannel(this.state.currentUserName, messageText);
+            e.target.value = '';
+        }
+    }
+
+    showMediaControls() {
+        this.elements.addChannelBtn.style.display = 'none';
+        this.elements.mediaControlsSidebar.style.display = 'block';
+        this.state.isMediaControlsVisible = true;
+        this.updateVideoControls();
+    }
+
+    hideMediaControls() {
+        this.elements.addChannelBtn.style.display = 'block';
+        this.elements.mediaControlsSidebar.style.display = 'none';
+        this.state.isMediaControlsVisible = false;
+    }
+
+    toggleMediaControls() {
+        if (this.state.isMediaControlsVisible) {
+            this.hideMediaControls();
+        } else {
+            this.showMediaControls();
+        }
+    }
+
+    updateVideoControls(activeSource = 'static') {
+        this.elements.enableCameraBtn.classList.remove('active');
+        this.elements.enableScreenBtn.classList.remove('active');
+        this.elements.disableVideoBtn.classList.remove('active');
+        
+        switch(activeSource) {
+            case 'camera':
+                this.elements.enableCameraBtn.classList.add('active');
+                break;
+            case 'screen':
+                this.elements.enableScreenBtn.classList.add('active');
+                break;
+            case 'static':
+                this.elements.disableVideoBtn.classList.add('active');
+                break;
+        }
+    }
+
+    updateAudioControls() {
+        if (this.state.isMicMuted) {
+            this.elements.muteMicBtn.classList.add('muted');
+            this.elements.muteMicBtn.querySelector('.text').textContent = 'Вкл. микрофон';
+        } else {
+            this.elements.muteMicBtn.classList.remove('muted');
+            this.elements.muteMicBtn.querySelector('.text').textContent = 'Выкл. микрофон';
+        }
+
+        if (this.state.isSoundMuted) {
+            this.elements.muteSoundBtn.classList.add('muted');
+            this.elements.muteSoundBtn.querySelector('.text').textContent = 'Вкл. звук';
+        } else {
+            this.elements.muteSoundBtn.classList.remove('muted');
+            this.elements.muteSoundBtn.querySelector('.text').textContent = 'Выкл. звук';
+        }
+    }
+
+    setMicrophoneState(isMuted) {
+        this.state.isMicMuted = isMuted;
+		this.serverManager.NetClient.changeStateMicrophone();
+        this.updateAudioControls();
+    }
+
+    setSoundState(isMuted) {
+        this.state.isSoundMuted = isMuted;
+		this.serverManager.NetClient.changeStateSound();
+        this.updateAudioControls();
+    }
+
+    showLoginModal() {
+        this.elements.loginModal.style.display = 'flex';
+        this.elements.registerModal.style.display = 'none';
+    }
+
+    showRegisterModal() {
+        this.elements.loginModal.style.display = 'none';
+        this.elements.registerModal.style.display = 'flex';
+    }
+
+    hideAuthModals() {
+        this.elements.loginModal.style.display = 'none';
+        this.elements.registerModal.style.display = 'none';
+    }
+
+    showAddChannelModal() {
+        this.elements.addChannelModal.style.display = 'flex';
+        document.getElementById('newChannelName').value = '';
+        document.getElementById('typeText').checked = true;
+    }
+
+    hideAddChannelModal() {
+        this.elements.addChannelModal.style.display = 'none';
+    }
+
+    showAddServerModal() {
+        this.elements.addServerModal.style.display = 'flex';
+        document.getElementById('newServerName').value = '';
+        document.getElementById('newServerIcon').value = '';
+		document.getElementById('newServerPassword').value = '';
+    }
+
+    hideAddServerModal() {
+        this.elements.addServerModal.style.display = 'none';
+    }
+
+    handleLogin(e) {
+        e.preventDefault();
+        const username = document.getElementById('loginUsername').value.trim();
+        const password = document.getElementById('loginPassword').value.trim();
+        
+        if (this.callbacks.onLogin) {
+            this.callbacks.onLogin(username, password);
+        }
+    }
+
+    handleRegister(e) {
+        e.preventDefault();
+        const username = document.getElementById('username').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value.trim();
+        
+        if (this.callbacks.onRegister) {
+            this.callbacks.onRegister(username, email, password);
+        }
+    }
+
+    handleAddChannel(e) {
+        e.preventDefault();
+        const name = document.getElementById('newChannelName').value.trim();
+        let type_c = document.querySelector('input[name="channelType"]:checked').value;
+        const password = document.getElementById('newPasswordC').value.trim();
+		console.log(password+"\n");
+        if (!name) {
+            alert('Введите название канала');
+            return;
+        }
+		if(type_c==="media")
+			type_c = "video";
+		this.serverManager.NetClient.safeSend({ type: "create_room", name: name , server_id: this.serverManager.getCurrentServer().id, server_name: this.serverManager.getCurrentServer().name, type_c: type_c, password: password });
+
+        if (this.callbacks.onAddChannel) {
+            //this.callbacks.onAddChannel(name, type);
+        }
+        
+        this.hideAddChannelModal();
+    }
+
+    handleAddServer(e) {
+        e.preventDefault();
+        const name = document.getElementById('newServerName').value.trim();
+        const icon = document.getElementById('newServerIcon').value.trim() || '🌐';
+		const password = document.getElementById('newServerPasswordS').value.trim() || '';
+		console.log(password); 
+        if (!name) {
+            alert('Введите название сервера');
+            return;
+        }
+		this.serverManager.NetClient.safeSend({ type: "create_server", name: name , icon: icon, password: password });
+        if (this.callbacks.onAddServer) {
+            this.callbacks.onAddServer(name, icon);
+        }
+        
+        this.hideAddServerModal();
+    }
+
+    clearChannelsLists() {
+        this.elements.textChannelsList.innerHTML = '';
+        this.elements.avChannelsList.innerHTML = '';
+    }
+
+    clearChatMessages() {
+        const messagesToRemove = this.elements.chatMessages.querySelectorAll('.message, em, .video-container, [id^="audio-"]');
+        messagesToRemove.forEach(el => el.remove());
+    }
+
+    removeMediaElements() {
+        document.querySelectorAll('[id^="audio-"], [id^="video-"]').forEach(el => el.remove());
+    }
+
+    showInfoMessage(text) {
+        const infoMsg = document.createElement('em');
+        infoMsg.textContent = text;
+        this.elements.chatMessages.appendChild(infoMsg);
+    }
+
+    scrollChatToBottom() {
+        this.elements.chatMessages.scrollTop = this.elements.chatMessages.scrollHeight;
+    }
+
+    triggerMediaControl(action) {
+        if (this.callbacks.onMediaControl) {
+            this.callbacks.onMediaControl(action);
+        }
+    }
+
+    handleGlobalKeys(e) {
+        if (e.key === 'Escape') {
+            if (this.elements.addChannelModal.style.display === 'flex') {
+                this.hideAddChannelModal();
+            }
+            if (this.elements.addServerModal.style.display === 'flex') {
+                this.hideAddServerModal();
+            }
+        }
+    }
+}
+
+// ===== DOM ЭЛЕМЕНТЫ =====
+const elements = {
+    loginModal: document.getElementById('loginModal'),
+    registerModal: document.getElementById('registerModal'),
+    addChannelModal: document.getElementById('addChannelModal'),
+    addServerModal: document.getElementById('addServerModal'),
+    serverList: document.getElementById('serverList'),
+    textChannelsList: document.getElementById('textChannelsList'),
+    avChannelsList: document.getElementById('avChannelsList'),
+    chatMessages: document.getElementById('chatMessages'),
+    chatHeader: document.querySelector('.chat-header h2'),
+    addChannelBtn: document.getElementById('addChannelBtn'),
+    addServerBtn: document.getElementById('addServerBtn'),
+    mediaControlsSidebar: document.getElementById('mediaControlsSidebar'),
+    localVideoPreview: document.getElementById('localVideoPreview'),
+    enableCameraBtn: document.getElementById('enableCameraBtn'),
+    enableScreenBtn: document.getElementById('enableScreenBtn'),
+    disableVideoBtn: document.getElementById('disableVideoBtn'),
+    muteMicBtn: document.getElementById('muteMicBtn'),
+    muteSoundBtn: document.getElementById('muteSoundBtn'),
+    loginForm: document.getElementById('loginForm'),
+    registerForm: document.getElementById('registerForm'),
+    addChannelForm: document.getElementById('addChannelForm'),
+    addServerForm: document.getElementById('addServerForm'),
+    allowMicBtn: document.getElementById('allowMicBtn'),
+    startAudioBtn: document.getElementById('startAudioBtn'),
+    status: document.getElementById('status'),
+    webrtcElements: document.getElementById('webrtcElements')
+};
+
+// ===== ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ =====
+
+    const serverManager = new ServerManager();
+    const ui = new UIHelper(elements, serverManager);
+{  
+    serverManager.on('serverSwitched', (data) => {
+        ui.renderServers();
+        ui.loadServerContent(data.currentServer);
+        
+        data.currentServer.getMediaChannels().forEach(channel => {
+            ui.refreshParticipantsList(channel.name);
+        });
+    });
+
+    serverManager.on('channelSwitched', (data) => {
+        ui.loadServerContent(data.server);
+    });
+
+    serverManager.on('channelCreated', (data) => {
+        ui.loadServerContent(data.server);
+    });
+
+    serverManager.on('userJoinedChannel', (data) => {
+        ui.refreshParticipantsList(data.channel.name);
+    });
+
+    serverManager.on('userLeftChannel', (data) => {
+        ui.refreshParticipantsList(data.channel.name);
+    });
+
+    serverManager.on('messageSent', (data) => {
+        if (data.channel.id === serverManager.getCurrentChannel().id) {
+            ui.loadMessages(data.channel);
+        }
+    });
+
+    ui.onServerSwitch((server) => {
+        serverManager.switchToServer(server.id);
+    });
+
+	ui.onChannelSwitch((channel) => {
+		const currentMediaChannel = serverManager.getActiveMediaChannel();
+		const isSameMediaChannel = currentMediaChannel && currentMediaChannel.id === channel.id && channel.isMediaChannel();
+		console.log("switchchannel");
+
+
+		// Если нажимаем на тот же медиа-канал
+		if (isSameMediaChannel) {
+			// Просто переключаем видимость медиа-панели и выходим
+
+
+			ui.toggleMediaControls();
+			serverManager.switchToChannel(channel.id);			
+			console.log("samesame");
+			return;
+		}
+		
+		if (channel.isMediaChannel()) {
+			serverManager.setActiveMediaChannel(channel);
+			console.log("22226");
+			serverManager.addUserToChannel(
+				serverManager.getCurrentServer().id,
+				channel.id,
+				ui.state.currentUserName
+			);
+			ui.showMediaControls();
+		} else {
+			ui.hideMediaControls();
+		}		
+		serverManager.switchToChannel(channel.id);
+	});
+    
+	ui.onAddChannel((name, type) => {
+        serverManager.createChannelInCurrentServer(name, type);
+    });
+
+    ui.onAddServer((name, icon) => {
+        //const newServer = serverManager.createServer(name, icon);
+        //serverManager.switchToServer(newServer.id);
+    });
+
+    ui.onLogin((username, password) => {
+        ui.state.currentUserName = username;
+
+        serverManager.setCurrentUserName(username, password);
+
+        
+        let initialServers = [];
+
+        serverManager.initialize(initialServers);
+        serverManager.addUserToServer(serverManager.getCurrentServer().id, username);
+        ui.renderServers();
+        ui.loadServerContent(serverManager.getCurrentServer());
+    });
+
+    ui.onRegister((username, email, password) => {
+        alert('Регистрация успешна! Войдите, пожалуйста.');
+        ui.showLoginModal();
+    });
+
+    ui.onMediaControl((action) => {
+        switch(action) {
+            case 'toggleMicrophone':
+                ui.setMicrophoneState(!ui.state.isMicMuted);
+                break;
+            case 'toggleSound':
+                ui.setSoundState(!ui.state.isSoundMuted);
+                break;
+        }
+    });
+
+    ui.init();
+    
+}
+
+</script>
+</body>
+</html>
